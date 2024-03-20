@@ -4,6 +4,8 @@ from time import time
 from morty_pde_ode_compare import FormatAssist
 import os
 import openmc
+import openmc.data
+import openmc.deplete
 
 
 class IsobarSolve(FormatAssist):
@@ -333,6 +335,63 @@ class IsobarSolve(FormatAssist):
         return result_mat
 
 
+def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
+               number_tracked):
+    """
+    Constructs required dictionaries
+    """
+    atomic_numbers = openmc.data.ATOMIC_NUMBER
+    atomic_symbols = openmc.data.ATOMIC_SYMBOL
+    lams = {}
+    FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
+    decay_frac = {}
+    tracked_nucs = []
+    chain = openmc.deplete.Chain.from_xml(chain_path)
+    yield_fracs = chain[fissile_nuclide].yield_data
+    cur_target = f'{target_element}{target_isobar}'
+    target_atomic_number = atomic_numbers[target_element]
+    i = 0
+    feeds = i - 1
+    while i < number_tracked:
+        cur_target = f'{target_element}{target_isobar}'
+        tracked_nucs.append(cur_target)
+        lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
+        FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
+        # If doesn't branch to metastable that decays into one of the isobars
+        decays = chain.nuclides[chain.nuclide_dict[cur_target]].decay_modes
+        if i != 0 and len(decays) > 1:
+            for dec in decays:
+                dec_type, target, ratio = dec
+                if target == prev_target:
+                    decay_frac[(i, feeds)] = ratio
+                    continue
+                feeds += 2
+                lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
+                FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
+                decay_frac[(i, feeds)] = ratio
+
+                feeds -= 2
+                i += 1
+                if i >= number_tracked:
+                    break
+                tracked_nucs.append(target)
+                lams[(i, feeds)] = openmc.data.decay_constant(target)
+                FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][target]
+                decay_frac[(i, feeds)] = 1
+        else:
+            decay_frac[(i, feeds)] = 1
+        i += 1
+        feeds += 1
+        target_atomic_number -= 1
+        target_element = atomic_symbols[target_atomic_number]
+        prev_target = cur_target
+    print(lams)
+    print(FYs)
+    print(decay_frac)
+    print(tracked_nucs)
+    return lams, FYs, decay_frac, tracked_nucs
+
+
 if __name__ == '__main__':
     # Test this module using MSRE 135 isobar
     parallel = False
@@ -340,9 +399,21 @@ if __name__ == '__main__':
     ode = True
     scaled_flux = True
     savedir = './images'
+    number_tracked = 5
     tf = 1.25 * 24 * 3600
+    fissile_nuclide = 'U235'
+    target_isobar = '135'
+    target_element = 'Xe'
     spacenodes = 100
+    selected_energy = 0.0253
+    available_energies = [0.0253, 500_000, 14_000_000]
+    PC = 1 / (3.2e-11)
+    P = 8e6  # 8MW
+    
+    build_data('../../data/chain_endfb71_pwr.xml', fissile_nuclide, target_element, target_isobar,
+               number_tracked)
 
+    input('Paused')
     L = 608.06  # 824.24
     V = 2116111
     frac_in = 0.33
