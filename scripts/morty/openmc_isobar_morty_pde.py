@@ -83,7 +83,6 @@ class IsobarSolve(FormatAssist):
             self.mu[nuclide] = cur_nuc_losses
 
         self.S = {}
-        self.S[self.count] = self._format_spatial((FYs[-1]/vol1), (0/vol2))
 
 
         return
@@ -141,7 +140,7 @@ class IsobarSolve(FormatAssist):
         result_mat = np.zeros((len(self.ts), nodes, self.count))
         self.concs = []
         for nuclide in range(self.count):
-            self.concs[nuclide] = np.array([0] * nodes)
+            self.concs.append(np.array([0] * nodes))
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
 
@@ -161,10 +160,13 @@ class IsobarSolve(FormatAssist):
             vector_form = False
         for gain_nuc in range(self.count):
             fission_source = self.FYs[gain_nuc]/self.vol1
-            decay_source = np.asarray(self.concs[gain_nuc] * 0)
+            decay_source = np.asarray(self.concs[gain_nuc] * 0.0)
             for loss_nuc in range(self.count):
-                frac = self.dec_fracs[(loss_nuc, gain_nuc)]
-                decay_source += frac * self.concs[loss_nuc] * self.lams[loss_nuc]
+                try:
+                    frac = self.dec_fracs[(loss_nuc, gain_nuc)]
+                    decay_source += (frac * self.concs[loss_nuc] * self.lams[loss_nuc])
+                except KeyError:
+                    continue
             incore_source = fission_source + decay_source
             excore_source = decay_source
             cur_source = self._format_spatial(incore_source, excore_source,
@@ -188,7 +190,7 @@ class IsobarSolve(FormatAssist):
         result_mat : 3D matrix
             Holds values over time, space, and nuclide (in that order)
         """
-        for nuclide in range(self.counts):
+        for nuclide in range(self.count):
             result_mat[ti, :, nuclide] = self.concs[nuclide]
         return result_mat
 
@@ -378,11 +380,6 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
         target_atomic_number -= 1
         target_element = atomic_symbols[target_atomic_number]
         prev_target = cur_target
-    print(lams)
-    print(FYs)
-    print(decay_frac)
-    print(loss_rates)
-    print(tracked_nucs)
     return lams, FYs, decay_frac, tracked_nucs, loss_rates
 
 
@@ -395,7 +392,7 @@ if __name__ == '__main__':
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
     number_tracked = 5
-    tf = 1.25 * 24 * 3600
+    tf = 30 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
     target_element = 'Xe'
@@ -417,7 +414,6 @@ if __name__ == '__main__':
                                                            selected_energy,
                                                            flux)
 
-    input('Paused')
     L = 608.06  # 824.24
     V = 2116111
     frac_in = 0.33
@@ -494,18 +490,18 @@ if __name__ == '__main__':
     if ode:
         if scaled_flux:
             P = 8e6 * frac_in
-            FYs['a'] = PC * P * Ya
-            FYs['b'] = PC * P * Yb
-            FYs['c'] = PC * P * Yc
-            FYs['d'] = PC * P * Yd
-            FYs['d_m1'] = PC * P * Yd_m1
-            phi_th = 6E12 * frac_in
-            losses['1c'] = phi_th * ng_I135
-            losses['1d'] = phi_th * ng_Xe135
-            losses['1d_m1'] = phi_th * ng_Xe135_m1
+            flux = 6E12 * frac_in
+            lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
+                                                                fissile_nuclide,
+                                                                target_element,
+                                                                target_isobar,
+                                                                number_tracked,
+                                                                selected_temp,
+                                                                selected_energy,
+                                                                flux)
             solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
-                                 lams, FYs, br_c_d, br_dm1_d, vol1,
-                                 vol2, losses)
+                                lams, FYs, dec_fracs, nucs, loss_rates,
+                                vol1, vol2)
 
         ode_result_mat = solver.ode_solve()
     end = time()
@@ -521,7 +517,7 @@ if __name__ == '__main__':
         units = 'd'
     else:
         units = 's'
-    labels = [isotopea, isotopeb, isotopec, isotoped_m1, isotoped]
+    labels = nucs
     for i, iso in enumerate(labels):
         plt.plot(ts[:-2], result_mat[0:-2, core_outlet_node, i],
                  label=f'{iso} Exiting Core')
