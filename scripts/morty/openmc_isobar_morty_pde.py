@@ -334,16 +334,39 @@ class IsobarSolve(FormatAssist):
 
         return result_mat
 
+def get_tot_xs(cur_target, endf_mt_total, temp):
+    has_data = True
+    try:
+        hdf5_data = openmc.data.IncidentNeutron.from_hdf5(f'/root/nndc_hdf5/{cur_target}.h5')
+    except FileNotFoundError:
+        print(f'{cur_target} does not have XS data')
+        has_data = False
+    net_xs = 0
+    if has_data:
+        for MT in endf_mt_total:
+            try:
+                f = hdf5_data.reactions[MT]._xs[temp]
+                net_xs += f(selected_energy)
+            except KeyError:
+                continue
+    net_xs = net_xs * 1e-24
+    return net_xs
+
 
 def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
-               number_tracked):
+               number_tracked, temp, selected_energy):
     """
     Constructs required dictionaries
     """
     atomic_numbers = openmc.data.ATOMIC_NUMBER
     atomic_symbols = openmc.data.ATOMIC_SYMBOL
+    endf_mt_total = [2, 4, 5, 11, 16, 17, 18, 22, 23, 24, 25, 26, 28, 29, 30,
+                     31, 32, 33, 34, 35, 36, 37, 41, 42, 44, 45, 102, 103,
+                     104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
+                     114, 115, 116, 117]
     lams = {}
     FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
+    XSs = []
     decay_frac = {}
     tracked_nucs = []
     chain = openmc.deplete.Chain.from_xml(chain_path)
@@ -357,6 +380,9 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
         tracked_nucs.append(cur_target)
         lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
         FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
+        net_xs = get_tot_xs(cur_target, endf_mt_total, temp)
+        XSs.append(net_xs)
+
         # If doesn't branch to metastable that decays into one of the isobars
         decays = chain.nuclides[chain.nuclide_dict[cur_target]].decay_modes
         if i != 0 and len(decays) > 1:
@@ -375,6 +401,8 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                 if i >= number_tracked:
                     break
                 tracked_nucs.append(target)
+                net_xs = get_tot_xs(target, endf_mt_total, temp)
+                XSs.append(net_xs)
                 lams[(i, feeds)] = openmc.data.decay_constant(target)
                 FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][target]
                 decay_frac[(i, feeds)] = 1
@@ -388,8 +416,9 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
     print(lams)
     print(FYs)
     print(decay_frac)
+    print(XSs)
     print(tracked_nucs)
-    return lams, FYs, decay_frac, tracked_nucs
+    return lams, FYs, decay_frac, tracked_nucs, XSs
 
 
 if __name__ == '__main__':
@@ -399,6 +428,7 @@ if __name__ == '__main__':
     ode = True
     scaled_flux = True
     savedir = './images'
+    chain_file = '../../data/chain_endfb71_pwr.xml'
     number_tracked = 5
     tf = 1.25 * 24 * 3600
     fissile_nuclide = 'U235'
@@ -406,12 +436,19 @@ if __name__ == '__main__':
     target_element = 'Xe'
     spacenodes = 100
     selected_energy = 0.0253
+    selected_temp = '294K'
+    available_temperatures = ['294K']
     available_energies = [0.0253, 500_000, 14_000_000]
     PC = 1 / (3.2e-11)
     P = 8e6  # 8MW
     
-    build_data('../../data/chain_endfb71_pwr.xml', fissile_nuclide, target_element, target_isobar,
-               number_tracked)
+    lams, FYs, decay_fracs, tracked_nucs, XSs = build_data(chain_file,
+                                                           fissile_nuclide,
+                                                           target_element,
+                                                           target_isobar,
+                                                           number_tracked,
+                                                           selected_temp,
+                                                           selected_energy)
 
     input('Paused')
     L = 608.06  # 824.24
@@ -435,36 +472,34 @@ if __name__ == '__main__':
     dt = lmbda * dz / nu1
     ts = np.arange(0, tf+dt, dt)
     print(f'Number of iterations: {len(ts)}')
-    isotopea = 'Sb135'
-    isotopeb = 'Te135'
-    isotopec = 'I135'
-    isotoped_m1 = 'Xe135_m1'
-    isotoped = 'Xe135'
-    br_c_d = 0.8349109
-    br_dm1_d = 0.997
-    lams = {}
-    lams['a'] = np.log(2) / 1.68
-    lams['b'] = np.log(2) / 19
-    lams['c'] = np.log(2) / (6.57*3600)
-    lams['d'] = np.log(2) / (15.29*3600)
-    lams['d_m1'] = np.log(2) / (9.14*3600)
+    #isotopea = 'Sb135'
+    #isotopeb = 'Te135'
+    #isotopec = 'I135'
+    #isotoped_m1 = 'Xe135_m1'
+    #isotoped = 'Xe135'
+    #br_c_d = 0.8349109
+    #br_dm1_d = 0.997
+    #lams = {}
+    #lams['a'] = np.log(2) / 1.68
+    #lams['b'] = np.log(2) / 19
+    #lams['c'] = np.log(2) / (6.57*3600)
+    #lams['d'] = np.log(2) / (15.29*3600)
+    #lams['d_m1'] = np.log(2) / (9.14*3600)
 
     zs = np.linspace(0, z1+z2, spacenodes)
 
-    PC = 1 / (3.2e-11)
-    P = 8e6  # 8MW
     # Yields from ENDF OpenMC thermal data
-    Ya = 0.00145764
-    Yb = 0.0321618
-    Yc = 0.0292737
-    Yd_m1 = 0.0110156
-    Yd = 0.000785125
-    FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
-    FYs['a'] = PC * P * Ya
-    FYs['b'] = PC * P * Yb
-    FYs['c'] = PC * P * Yc
-    FYs['d'] = PC * P * Yd
-    FYs['d_m1'] = PC * P * Yd_m1
+    #Ya = 0.00145764
+    #Yb = 0.0321618
+    #Yc = 0.0292737
+    #Yd_m1 = 0.0110156
+    #Yd = 0.000785125
+    #FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
+    #FYs['a'] = PC * P * Ya
+    #FYs['b'] = PC * P * Yb
+    #FYs['c'] = PC * P * Yc
+    #FYs['d'] = PC * P * Yd
+    #FYs['d_m1'] = PC * P * Yd_m1
     phi_th = 6E12
     losses = {}
     losses['1a'] = 0
