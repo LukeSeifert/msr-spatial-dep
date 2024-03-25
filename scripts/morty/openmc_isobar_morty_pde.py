@@ -9,8 +9,9 @@ import openmc.deplete
 
 
 class IsobarSolve(FormatAssist):
-    def __init__(self, nodes, z1, z2, nu1, nu2, lmbda, tf, lams,
-                 FYs, br_c_d, br_dm1_d, vol1, vol2, losses):
+    def __init__(self, nodes, z1, z2, nu1, nu2, lmbda, tf,
+                 lams, FYs, dec_fracs, nucs, loss_rates,
+                 vol1, vol2):
         """
         This class allows for the solve of a system of PDEs by
         solving each individually in a Jacobi-like manner.
@@ -61,44 +62,29 @@ class IsobarSolve(FormatAssist):
                 Loss term due to parasitic absorption or other similar terms
 
         """
+        self.count = len(nucs)
         self.nodes = nodes
         self.z1 = z1
         self.zs = np.linspace(0, z1+z2, nodes)
         self.dt = lmbda * dz / nu1
         self.ts = np.arange(0, tf+self.dt, self.dt)
         self.nu_vec = self._format_spatial(nu1, nu2)
-
-        self.mu = {}
-        self.mu['a'] = self._format_spatial((lams['a'] + losses['1a']),
-                                            (lams['a'] + losses['2a']))
-        self.mu['b'] = self._format_spatial((lams['b'] + losses['1b']),
-                                            (lams['b'] + losses['2b']))
-        self.mu['c'] = self._format_spatial((lams['c'] + losses['1c']),
-                                            (lams['c'] + losses['2c']))
-        self.mu['d_m1'] = self._format_spatial((lams['d_m1']
-                                                + losses['1d_m1']),
-                                               (lams['d_m1'] + losses['2d']))
-        self.mu['d'] = self._format_spatial((lams['d'] + losses['1d']),
-                                            (lams['d'] + losses['2d']))
-        self.S = {}
-        self.S['a'] = self._format_spatial((FYs['a']/vol1), (0/vol2))
-
-        self.lama = lams['a']
-        self.lamb = lams['b']
-        self.lamc = lams['c']
-        self.lamd = lams['d']
-        self.lamd_m1 = lams['d_m1']
-
-        self.FYb = FYs['b']
-        self.FYc = FYs['c']
-        self.FYd = FYs['d']
-        self.FYd_m1 = FYs['d_m1']
-
-        self.br_c_d = br_c_d
-        self.br_dm1_d = br_dm1_d
-
+        self.lams = lams
+        self.dec_fracs = dec_fracs
+        self.FYs = FYs
         self.vol1 = vol1
         self.vol2 = vol2
+
+        self.mu = {}
+        for nuclide in range(self.count):
+            incore_losses = lams[nuclide] + loss_rates[nuclide]
+            excore_losses = lams[nuclide]
+            cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
+            self.mu[nuclide] = cur_nuc_losses
+
+        self.S = {}
+        self.S[self.count] = self._format_spatial((FYs[-1]/vol1), (0/vol2))
+
 
         return
 
@@ -110,8 +96,8 @@ class IsobarSolve(FormatAssist):
         ----------
         conc : 1D vector
             Concentration over spatial nodes at previous time
-        isotope : string
-            Nuclide isobar indicator (a, b, c, d, or d_m1)
+        isotope : int
+            Nuclide isobar indicator
 
         Returns
         -------
@@ -152,17 +138,11 @@ class IsobarSolve(FormatAssist):
             nodes = self.nodes
         else:
             nodes = 1
-        result_mat = np.zeros((len(self.ts), nodes, 5))
-        self.conc_a = np.array([0] * nodes)
-        result_mat[0, :, 0] = self.conc_a
-        self.conc_b = np.array([0] * nodes)
-        result_mat[0, :, 1] = self.conc_b
-        self.conc_c = np.array([0] * nodes)
-        result_mat[0, :, 2] = self.conc_c
-        self.conc_d_m1 = np.array([0] * nodes)
-        result_mat[0, :, 3] = self.conc_d_m1
-        self.conc_d = np.array([0] * nodes)
-        result_mat[0, :, 4] = self.conc_d
+        result_mat = np.zeros((len(self.ts), nodes, self.count))
+        self.concs = []
+        for nuclide in range(self.count):
+            self.concs[nuclide] = np.array([0] * nodes)
+            result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
 
     def _update_sources(self, PDE=True):
@@ -179,26 +159,17 @@ class IsobarSolve(FormatAssist):
             vector_form = True
         else:
             vector_form = False
-        self.S['b'] = self._format_spatial((self.conc_a*self.lama
-                                            + self.FYb/self.vol1),
-                                           (self.conc_a*self.lama),
-                                           vector_form=vector_form)
-        self.S['c'] = self._format_spatial((self.conc_b*self.lamb
-                                            + self.FYc/self.vol1),
-                                           (self.conc_b*self.lama),
-                                           vector_form=vector_form)
-        self.S['d_m1'] = self._format_spatial((self.FYd_m1/self.vol1),
-                                              (0/self.vol2))
-        self.S['d'] = self._format_spatial((self.br_c_d*self.conc_c*self.lamc
-                                            + self.FYd/self.vol1
-                                            + self.br_dm1_d
-                                            * self.conc_d_m1
-                                            * self.lamd_m1),
-                                           (self.br_c_d*self.conc_c*self.lamc
-                                            + self.br_dm1_d
-                                            * self.conc_d_m1
-                                            * self.lamd_m1),
-                                           vector_form=vector_form)
+        for gain_nuc in range(self.count):
+            fission_source = self.FYs[gain_nuc]/self.vol1
+            decay_source = np.asarray(self.concs[gain_nuc] * 0)
+            for loss_nuc in range(self.count):
+                frac = self.dec_fracs[(loss_nuc, gain_nuc)]
+                decay_source += frac * self.concs[loss_nuc] * self.lams[loss_nuc]
+            incore_source = fission_source + decay_source
+            excore_source = decay_source
+            cur_source = self._format_spatial(incore_source, excore_source,
+                                              vector_form=vector_form)
+            self.S[gain_nuc] = cur_source
         return
 
     def _update_result_mat(self, result_mat, ti):
@@ -217,11 +188,8 @@ class IsobarSolve(FormatAssist):
         result_mat : 3D matrix
             Holds values over time, space, and nuclide (in that order)
         """
-        result_mat[ti, :, 0] = self.conc_a
-        result_mat[ti, :, 1] = self.conc_b
-        result_mat[ti, :, 2] = self.conc_c
-        result_mat[ti, :, 3] = self.conc_d_m1
-        result_mat[ti, :, 4] = self.conc_d
+        for nuclide in range(self.counts):
+            result_mat[ti, :, nuclide] = self.concs[nuclide]
         return result_mat
 
     def serial_MORTY_solve(self):
@@ -240,11 +208,8 @@ class IsobarSolve(FormatAssist):
 
             self._update_sources()
 
-            self.conc_a = self._external_PDE_no_step(self.conc_a, 'a')
-            self.conc_b = self._external_PDE_no_step(self.conc_b, 'b')
-            self.conc_c = self._external_PDE_no_step(self.conc_c, 'c')
-            self.conc_d_m1 = self._external_PDE_no_step(self.conc_d_m1, 'd_m1')
-            self.conc_d = self._external_PDE_no_step(self.conc_d, 'd')
+            for nuclide in range(self.count):
+                self.concs[nuclide] = self._external_PDE_no_step(self.concs[nuclide], nuclide)
 
             result_mat = self._update_result_mat(result_mat, ti)
 
@@ -354,7 +319,7 @@ def get_tot_xs(cur_target, endf_mt_total, temp):
 
 
 def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
-               number_tracked, temp, selected_energy):
+               number_tracked, temp, selected_energy, flux):
     """
     Constructs required dictionaries
     """
@@ -366,9 +331,9 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                      114, 115, 116, 117]
     lams = {}
     FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
-    XSs = []
+    loss_rates = {}
     decay_frac = {}
-    tracked_nucs = []
+    tracked_nucs = {}
     chain = openmc.deplete.Chain.from_xml(chain_path)
     yield_fracs = chain[fissile_nuclide].yield_data
     cur_target = f'{target_element}{target_isobar}'
@@ -377,11 +342,11 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
     feeds = i - 1
     while i < number_tracked:
         cur_target = f'{target_element}{target_isobar}'
-        tracked_nucs.append(cur_target)
-        lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
-        FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
+        tracked_nucs[i] = cur_target
+        lams[i] = openmc.data.decay_constant(cur_target)
+        FYs[i] = PC * P * yield_fracs[selected_energy][cur_target]
         net_xs = get_tot_xs(cur_target, endf_mt_total, temp)
-        XSs.append(net_xs)
+        loss_rates[i] = net_xs * flux
 
         # If doesn't branch to metastable that decays into one of the isobars
         decays = chain.nuclides[chain.nuclide_dict[cur_target]].decay_modes
@@ -392,19 +357,19 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                     decay_frac[(i, feeds)] = ratio
                     continue
                 feeds += 2
-                lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
-                FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
+                #lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
+                #FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
                 decay_frac[(i, feeds)] = ratio
 
                 feeds -= 2
                 i += 1
                 if i >= number_tracked:
                     break
-                tracked_nucs.append(target)
+                tracked_nucs[i] = target
                 net_xs = get_tot_xs(target, endf_mt_total, temp)
-                XSs.append(net_xs)
-                lams[(i, feeds)] = openmc.data.decay_constant(target)
-                FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][target]
+                loss_rates[i] = net_xs * flux
+                lams[i] = openmc.data.decay_constant(target)
+                FYs[i] = PC * P * yield_fracs[selected_energy][target]
                 decay_frac[(i, feeds)] = 1
         else:
             decay_frac[(i, feeds)] = 1
@@ -416,9 +381,9 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
     print(lams)
     print(FYs)
     print(decay_frac)
-    print(XSs)
+    print(loss_rates)
     print(tracked_nucs)
-    return lams, FYs, decay_frac, tracked_nucs, XSs
+    return lams, FYs, decay_frac, tracked_nucs, loss_rates
 
 
 if __name__ == '__main__':
@@ -435,6 +400,7 @@ if __name__ == '__main__':
     target_isobar = '135'
     target_element = 'Xe'
     spacenodes = 100
+    flux = 6E12
     selected_energy = 0.0253
     selected_temp = '294K'
     available_temperatures = ['294K']
@@ -442,13 +408,14 @@ if __name__ == '__main__':
     PC = 1 / (3.2e-11)
     P = 8e6  # 8MW
     
-    lams, FYs, decay_fracs, tracked_nucs, XSs = build_data(chain_file,
+    lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
                                                            fissile_nuclide,
                                                            target_element,
                                                            target_isobar,
                                                            number_tracked,
                                                            selected_temp,
-                                                           selected_energy)
+                                                           selected_energy,
+                                                           flux)
 
     input('Paused')
     L = 608.06  # 824.24
@@ -500,25 +467,26 @@ if __name__ == '__main__':
     #FYs['c'] = PC * P * Yc
     #FYs['d'] = PC * P * Yd
     #FYs['d_m1'] = PC * P * Yd_m1
-    phi_th = 6E12
-    losses = {}
-    losses['1a'] = 0
-    losses['2a'] = 0
-    losses['1b'] = 0
-    losses['2b'] = 0
-    losses['2c'] = 0
-    losses['2d'] = 0
-    ng_I135 = 80.53724E-24
-    ng_Xe135 = 2_666_886.8E-24
-    ng_Xe135_m1 = 0  # 10_187_238E-24
-    losses['1c'] = phi_th * ng_I135
-    losses['1d'] = phi_th * ng_Xe135
-    losses['1d_m1'] = phi_th * ng_Xe135_m1
+    #phi_th = 6E12
+    #losses = {}
+    #losses['1a'] = 0
+    #losses['2a'] = 0
+    #losses['1b'] = 0
+    #losses['2b'] = 0
+    #losses['2c'] = 0
+    #losses['2d'] = 0
+    #ng_I135 = 80.53724E-24
+    #ng_Xe135 = 2_666_886.8E-24
+    #ng_Xe135_m1 = 0  # 10_187_238E-24
+    #losses['1c'] = phi_th * ng_I135
+    #losses['1d'] = phi_th * ng_Xe135
+    #losses['1d_m1'] = phi_th * ng_Xe135_m1
 
     start = time()
+    # lams, FYs, dec_fracs, nucs, loss_rates
     solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
-                         lams, FYs, br_c_d, br_dm1_d, vol1,
-                         vol2, losses)
+                         lams, FYs, dec_fracs, nucs, loss_rates,
+                         vol1, vol2)
     if parallel:
         result_mat = solver.parallel_MORTY_solve()
     else:
