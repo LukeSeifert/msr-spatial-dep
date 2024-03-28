@@ -334,6 +334,7 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
     target_atomic_number = atomic_numbers[target_element]
     i = 0
     feeds = i - 1
+    skip_feed = []
     while i < number_tracked:
         cur_target = f'{target_element}{target_isobar}'
         tracked_nucs[i] = cur_target
@@ -347,15 +348,22 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
         if i != 0 and len(decays) > 1:
             for dec in decays:
                 dec_type, target, ratio = dec
-                if target == prev_target:
-                    decay_frac[(i, feeds)] = ratio
+                if target_isobar not in target:
                     continue
-                feeds += 2
+                if target == prev_target:
+                    feed_val = feeds
+                    while feed_val in skip_feed:
+                        feed_val += 1
+                    decay_frac[(i, feed_val)] = ratio
+                    continue
+                #feeds += 2
                 #lams[(i, feeds)] = openmc.data.decay_constant(cur_target)
                 #FYs[(i, feeds)] = PC * P * yield_fracs[selected_energy][cur_target]
-                decay_frac[(i, feeds)] = ratio
+                #for index, nuc in tracked_nucs.items():
+                #    if target == nuc:
+                decay_frac[(i, feeds+2)] = ratio
 
-                feeds -= 2
+                #feeds -= 2
                 i += 1
                 if i >= number_tracked:
                     break
@@ -364,7 +372,15 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                 loss_rates[i] = net_xs * flux
                 lams[i] = openmc.data.decay_constant(target)
                 FYs[i] = PC * P * yield_fracs[selected_energy][target]
-                decay_frac[(i, feeds)] = 1
+                if "_m" in target:
+                    decay_frac[(i, feeds)] = 1
+                    skip_feed.append(i)
+                #else:
+                #    feed_val = feeds + 1
+                #    while feed_val in skip_feed:
+                #        feed_val += 1
+                #    print(f'{feed_val=}')
+                #    decay_frac[(i, feed_val)] = 1
         else:
             decay_frac[(i, feeds)] = 1
         i += 1
@@ -436,6 +452,8 @@ def nuclide_analysis(number_tracked_list, base_number_tracked, chain_file,
                                                             selected_temp,
                                                             selected_energy,
                                                             flux)
+        print(dec_fracs)
+        print(nucs)
         zs = np.linspace(0, z1+z2, spacenodes)
         dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
         dt = lmbda * dz / nu1
@@ -508,7 +526,7 @@ if __name__ == '__main__':
     main_run = False
     spacenode_list = [2, 5, 10, 100, 200, 500]
     spatial_refinement = False
-    number_tracked_list = [1, 2]
+    number_tracked_list = [1, 2, 3, 4, 5, 6]
     nuclide_refinement = True
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
@@ -526,15 +544,6 @@ if __name__ == '__main__':
     PC = 1 / (3.2e-11)
     P = 8e6  # 8MW
     
-    lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
-                                                           fissile_nuclide,
-                                                           target_element,
-                                                           target_isobar,
-                                                           number_tracked,
-                                                           selected_temp,
-                                                           selected_energy,
-                                                           flux)
-
     L = 608.06  # 824.24
     V = 2116111
     frac_in = 0.33
@@ -553,6 +562,15 @@ if __name__ == '__main__':
     loss_core = 6e12 * 2666886.8E-24
 
     if main_run:
+        lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
+                                                            fissile_nuclide,
+                                                            target_element,
+                                                            target_isobar,
+                                                            number_tracked,
+                                                            selected_temp,
+                                                            selected_energy,
+                                                            flux)
+
         dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
         dt = lmbda * dz / nu1
         ts = np.arange(0, tf+dt, dt)
