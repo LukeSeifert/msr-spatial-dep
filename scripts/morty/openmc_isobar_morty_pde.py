@@ -11,7 +11,7 @@ import openmc.deplete
 class IsobarSolve(FormatAssist):
     def __init__(self, nodes, z1, z2, nu1, nu2, lmbda, tf,
                  lams, FYs, dec_fracs, nucs, loss_rates,
-                 vol1, vol2):
+                 vol1, vol2, dz):
         """
         This class allows for the solve of a system of PDEs by
         solving each individually in a Jacobi-like manner.
@@ -206,7 +206,7 @@ class IsobarSolve(FormatAssist):
 
         """
         result_mat = self._initialize_result_mat()
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
 
             self._update_sources()
 
@@ -424,16 +424,23 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
     return x_vals, y_vals, lab_lt, units
 
 
-def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates):
+def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spacenodes):
+    base_spacenodes = spacenodes
     for spacenodes in spacenode_list:
+        zs = np.linspace(0, z1+z2, spacenodes)
+        dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
+        dt = lmbda * dz / nu1
+        ts = np.arange(0, tf+dt, dt)
         solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
                             lams, FYs, dec_fracs, nucs, loss_rates,
-                            vol1, vol2)
+                            vol1, vol2, dz)
+        start = time()
         result_mat = solver.serial_MORTY_solve()
+        print(f'Ran {spacenodes} in {time() - start}s')
         xs, ys, ls, u = conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
                                      ode, savedir, plotting=False)
-        for i in range(len(xs)):
-            plt.plot(xs[i], ys[i], label=ls[i] + f' {spacenodes}')
+        i = 0
+        plt.plot(xs[i], ys[i], label=ls[i] + f' {spacenodes} nodes')
     plt.xlabel(f'Time [{u}]')
     plt.ylabel('Concentration [at/cc]')
     plt.yscale('log')
@@ -441,6 +448,8 @@ def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates):
     plt.tight_layout()
     plt.savefig(f'{savedir}/spatial_refine.png')
     plt.close()
+    spacenodes = base_spacenodes
+    return
         
         
 
@@ -451,7 +460,8 @@ if __name__ == '__main__':
     ode = False
     scaled_flux = True
     # Analysis
-    spacenode_list = [5, 10]
+    main_run = False
+    spacenode_list = [50] #[2, 5, 10, 100]
     spatial_refinement = True
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
@@ -482,6 +492,7 @@ if __name__ == '__main__':
     V = 2116111
     frac_in = 0.33
     frac_out = 0.67
+    lmbda = 0.9
     z1 = frac_in * L
     z2 = frac_out * L
     vol1 = frac_in * V
@@ -493,27 +504,27 @@ if __name__ == '__main__':
     nu1 = nu
     nu2 = nu
     loss_core = 6e12 * 2666886.8E-24
-    dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
-    lmbda = 0.9
-    dt = lmbda * dz / nu1
-    ts = np.arange(0, tf+dt, dt)
-    print(f'Number of iterations: {len(ts)}')
 
-    zs = np.linspace(0, z1+z2, spacenodes)
+    if main_run:
+        dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
+        dt = lmbda * dz / nu1
+        ts = np.arange(0, tf+dt, dt)
+        print(f'Number of iterations: {len(ts)}')
 
-    start = time()
-    solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
-                         lams, FYs, dec_fracs, nucs, loss_rates,
-                         vol1, vol2)
-    if parallel:
-        result_mat = solver.parallel_MORTY_solve()
-    else:
-        result_mat = solver.serial_MORTY_solve()
-    ode_result_mat = None
-    if ode:
-        if scaled_flux:
-            P = 8e6 * frac_in
-            flux = 6E12 * frac_in
+        zs = np.linspace(0, z1+z2, spacenodes)
+        solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
+                            lams, FYs, dec_fracs, nucs, loss_rates,
+                            vol1, vol2, dz)
+        start = time()
+        if parallel:
+            result_mat = solver.parallel_MORTY_solve()
+        else:
+            result_mat = solver.serial_MORTY_solve()
+        ode_result_mat = None
+        if ode:
+            if scaled_flux:
+                P = 8e6 * frac_in
+                flux = 6E12 * frac_in
             lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
                                                                 fissile_nuclide,
                                                                 target_element,
@@ -524,11 +535,11 @@ if __name__ == '__main__':
                                                                 flux)
             solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
                                 lams, FYs, dec_fracs, nucs, loss_rates,
-                                vol1, vol2)
+                                vol1, vol2, dz)
 
-        ode_result_mat = solver.ode_solve()
-    end = time()
-    print(f'Time taken : {round(end-start)}s')
+            ode_result_mat = solver.ode_solve()
+        end = time()
+        print(f'Time taken : {round(end-start)}s')
 
     # Plotting
     savedir = './images'
@@ -536,13 +547,14 @@ if __name__ == '__main__':
         os.makedirs(savedir)
 
     if spatial_refinement:
-        spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates)
+        spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs,
+                         loss_rates, spacenodes)
+    if main_run:
+        conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
+                    ode, savedir, ode_result_mat=ode_result_mat)
+        labels = nucs
 
-    conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
-                 ode, savedir, ode_result_mat=ode_result_mat)
-    labels = nucs
-
-    if ode:
+    if main_run and ode:
         for i, iso in enumerate(labels):
             print('-' * 50)
             print(f'{labels[iso]} atom densities')
@@ -555,7 +567,7 @@ if __name__ == '__main__':
             print(f'{labels[iso]} PDE/ODE diff: {round(pcnt_diff, 3)}%')
 
     # Gif
-    if gif:
+    if main_run and gif:
         print(f'Estimated time to gif completion: {round(0.08 * len(ts))} s')
         start = time()
         from matplotlib.animation import FuncAnimation
