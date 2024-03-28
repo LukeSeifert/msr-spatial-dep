@@ -247,7 +247,7 @@ class IsobarSolve(FormatAssist):
         """
         ODE_result_mat = self._initialize_result_mat(False)
 
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
             self._update_sources(False)
 
             for nuclide in range(self.count):
@@ -270,7 +270,7 @@ class IsobarSolve(FormatAssist):
         """
         import multiprocessing
         result_mat = self._initialize_result_mat()
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
             # Parallelization is easy due to Jacobi appraoch
             #   Each isobar is independent from the others at each iteration
 

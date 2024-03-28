@@ -233,7 +233,7 @@ class IsobarSolve(FormatAssist):
 
         """
         result_mat = self._initialize_result_mat()
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
 
             self._update_sources()
 
@@ -282,7 +282,7 @@ class IsobarSolve(FormatAssist):
         conc0_d = self.conc_d
         conc0_d_m1 = self.conc_d_m1
 
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
             self._update_sources(False)
 
             self.conc_a = self._external_ODE_no_step(conc0_a, 'a', t)
@@ -308,7 +308,7 @@ class IsobarSolve(FormatAssist):
         """
         import multiprocessing
         result_mat = self._initialize_result_mat()
-        for ti, t in enumerate(ts[:-1]):
+        for ti, t in enumerate(self.ts[:-1]):
             # Parallelization is easy due to Jacobi appraoch
             #   Each isobar is independent from the others at each iteration
 
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     ode = True
     scaled_flux = True
     savedir = './images'
-    tf = 1.25 * 24 * 3600
+    tf = 30 #1.25 * 24 * 3600
     spacenodes = 100
 
     L = 608.06  # 824.24
