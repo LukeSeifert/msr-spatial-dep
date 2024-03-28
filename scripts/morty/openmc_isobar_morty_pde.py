@@ -246,20 +246,12 @@ class IsobarSolve(FormatAssist):
 
         """
         ODE_result_mat = self._initialize_result_mat(False)
-        conc0_a = self.conc_a
-        conc0_b = self.conc_b
-        conc0_c = self.conc_c
-        conc0_d = self.conc_d
-        conc0_d_m1 = self.conc_d_m1
 
         for ti, t in enumerate(ts[:-1]):
             self._update_sources(False)
 
-            self.conc_a = self._external_ODE_no_step(conc0_a, 'a', t)
-            self.conc_b = self._external_ODE_no_step(conc0_b, 'b', t)
-            self.conc_c = self._external_ODE_no_step(conc0_c, 'c', t)
-            self.conc_d_m1 = self._external_ODE_no_step(conc0_d_m1, 'd_m1', t)
-            self.conc_d = self._external_ODE_no_step(conc0_d, 'd', t)
+            for nuclide in range(self.count):
+                self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide, t)
 
             ODE_result_mat = self._update_result_mat(ODE_result_mat, ti)
 
@@ -382,21 +374,93 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
         prev_target = cur_target
     return lams, FYs, decay_frac, tracked_nucs, loss_rates
 
+def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
+                 ode, savedir, ode_result_mat=None, plotting=True):
+    if tf > 3600 * 24:
+        ts = ts / (3600*24)
+        units = 'd'
+    else:
+        units = 's'
+    labels = nucs
+    core_outlet_node = int(spacenodes * frac_in)
+    x_vals = list()
+    y_vals = list()
+    lab_lt = list()
+    for i, iso in enumerate(labels):
+        x = ts[:-2] 
+        x_vals.append(x)
+        y = result_mat[0:-2, core_outlet_node, i]
+        y_vals.append(y)
+        label = f'{labels[iso]} Exiting Core'
+        lab_lt.append(label)
+        if plotting:
+            plt.plot(x, y, label=label)
+        x_vals.append(x)
+        y = result_mat[0:-2, -1, i]
+        y_vals.append(y)
+        label = f'{labels[iso]} Entering Core'
+        lab_lt.append(label)
+        if plotting:
+            plt.plot(x, y, label=label)
+        
+        if ode:
+            x = ts[:-2] 
+            x_vals.append(x)
+            y = ode_result_mat[0:-2, 0, i]
+            y_vals.append(y)
+            label = f'{labels[iso]} ODE'
+            lab_lt.append(label)
+            if plotting:
+                plt.plot(x, y, label=label)
+        
+        if plotting:
+            plt.xlabel(f'Time [{units}]')
+            plt.ylabel('Concentration [at/cc]')
+            plt.yscale('log')
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(f'{savedir}/nuc_{labels[iso]}_conc_time.png')
+            plt.close()
+    return x_vals, y_vals, lab_lt, units
+
+
+def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates):
+    for spacenodes in spacenode_list:
+        solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
+                            lams, FYs, dec_fracs, nucs, loss_rates,
+                            vol1, vol2)
+        result_mat = solver.serial_MORTY_solve()
+        xs, ys, ls, u = conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
+                                     ode, savedir, plotting=False)
+        for i in range(len(xs)):
+            plt.plot(xs[i], ys[i], label=ls[i] + f' {spacenodes}')
+    plt.xlabel(f'Time [{u}]')
+    plt.ylabel('Concentration [at/cc]')
+    plt.yscale('log')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'{savedir}/spatial_refine.png')
+    plt.close()
+        
+        
 
 if __name__ == '__main__':
     # Test this module using MSRE 135 isobar
     parallel = False
     gif = False
-    ode = True
+    ode = False
     scaled_flux = True
+    # Analysis
+    spacenode_list = [5, 10]
+    spatial_refinement = True
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
-    number_tracked = 5
-    tf = 30 #1.25 * 24 * 3600
+    number_tracked = 1
+    tf = 600 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
     target_element = 'Xe'
-    spacenodes = 100
+    spacenodes = 10
     flux = 6E12
     selected_energy = 0.0253
     selected_temp = '294K'
@@ -418,7 +482,6 @@ if __name__ == '__main__':
     V = 2116111
     frac_in = 0.33
     frac_out = 0.67
-    core_outlet_node = int(spacenodes * frac_in)
     z1 = frac_in * L
     z2 = frac_out * L
     vol1 = frac_in * V
@@ -435,51 +498,10 @@ if __name__ == '__main__':
     dt = lmbda * dz / nu1
     ts = np.arange(0, tf+dt, dt)
     print(f'Number of iterations: {len(ts)}')
-    #isotopea = 'Sb135'
-    #isotopeb = 'Te135'
-    #isotopec = 'I135'
-    #isotoped_m1 = 'Xe135_m1'
-    #isotoped = 'Xe135'
-    #br_c_d = 0.8349109
-    #br_dm1_d = 0.997
-    #lams = {}
-    #lams['a'] = np.log(2) / 1.68
-    #lams['b'] = np.log(2) / 19
-    #lams['c'] = np.log(2) / (6.57*3600)
-    #lams['d'] = np.log(2) / (15.29*3600)
-    #lams['d_m1'] = np.log(2) / (9.14*3600)
 
     zs = np.linspace(0, z1+z2, spacenodes)
 
-    # Yields from ENDF OpenMC thermal data
-    #Ya = 0.00145764
-    #Yb = 0.0321618
-    #Yc = 0.0292737
-    #Yd_m1 = 0.0110156
-    #Yd = 0.000785125
-    #FYs = {}  # atoms/s = fissions/J * J/s * yield_fraction
-    #FYs['a'] = PC * P * Ya
-    #FYs['b'] = PC * P * Yb
-    #FYs['c'] = PC * P * Yc
-    #FYs['d'] = PC * P * Yd
-    #FYs['d_m1'] = PC * P * Yd_m1
-    #phi_th = 6E12
-    #losses = {}
-    #losses['1a'] = 0
-    #losses['2a'] = 0
-    #losses['1b'] = 0
-    #losses['2b'] = 0
-    #losses['2c'] = 0
-    #losses['2d'] = 0
-    #ng_I135 = 80.53724E-24
-    #ng_Xe135 = 2_666_886.8E-24
-    #ng_Xe135_m1 = 0  # 10_187_238E-24
-    #losses['1c'] = phi_th * ng_I135
-    #losses['1d'] = phi_th * ng_Xe135
-    #losses['1d_m1'] = phi_th * ng_Xe135_m1
-
     start = time()
-    # lams, FYs, dec_fracs, nucs, loss_rates
     solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
                          lams, FYs, dec_fracs, nucs, loss_rates,
                          vol1, vol2)
@@ -487,6 +509,7 @@ if __name__ == '__main__':
         result_mat = solver.parallel_MORTY_solve()
     else:
         result_mat = solver.serial_MORTY_solve()
+    ode_result_mat = None
     if ode:
         if scaled_flux:
             P = 8e6 * frac_in
@@ -512,39 +535,24 @@ if __name__ == '__main__':
     if not os.path.isdir(savedir):
         os.makedirs(savedir)
 
-    if tf > 3600 * 24:
-        ts = ts / (3600*24)
-        units = 'd'
-    else:
-        units = 's'
-    labels = nucs
-    for i, iso in enumerate(labels):
-        plt.plot(ts[:-2], result_mat[0:-2, core_outlet_node, i],
-                 label=f'{iso} Exiting Core')
-        plt.plot(ts[:-2], result_mat[0:-2, -1, i],
-                 label=f'{iso} Entering Core')
-        if ode:
-            plt.plot(ts[:-2], ode_result_mat[0:-2, 0, i],
-                     label=f'{iso} ODE', linestyle='--')
+    if spatial_refinement:
+        spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates)
 
-        plt.xlabel(f'Time [{units}]')
-        plt.ylabel('Concentration [at/cc]')
-        plt.yscale('log')
-        plt.legend()
-        plt.savefig(f'{savedir}/nuc_{iso}_conc_time.png')
-        plt.close()
+    conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
+                 ode, savedir, ode_result_mat=ode_result_mat)
+    labels = nucs
 
     if ode:
         for i, iso in enumerate(labels):
             print('-' * 50)
-            print(f'{iso} atom densities')
+            print(f'{labels[iso]} atom densities')
             PDE_val_core_inlet = result_mat[-2, 0, i]
             print(f'PDE core inlet: {PDE_val_core_inlet}')
             ODE_val = ode_result_mat[-2, 0, i]
             print(f'ODE {ODE_val}')
             pcnt_diff = ((PDE_val_core_inlet - ODE_val) /
                          (PDE_val_core_inlet) * 100)
-            print(f'{iso} PDE/ODE diff: {round(pcnt_diff, 3)}%')
+            print(f'{labels[iso]} PDE/ODE diff: {round(pcnt_diff, 3)}%')
 
     # Gif
     if gif:
@@ -564,7 +572,7 @@ if __name__ == '__main__':
 
             for i, iso in enumerate(labels):
                 ax.plot(zs, result_mat[frame, :, i],
-                        label=f'{iso}', marker='.')
+                        label=f'{labels[iso]}', marker='.')
             ax.set_title(f'Time: {round(frame*dt, 4)} s')
             plt.legend()
         animation = FuncAnimation(fig, update, frames=len(ts), interval=1)
