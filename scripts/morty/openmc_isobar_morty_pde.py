@@ -423,9 +423,50 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
             plt.close()
     return x_vals, y_vals, lab_lt, units
 
+def nuclide_analysis(number_tracked_list, base_number_tracked, chain_file,
+                     fissile_nuclide, target_element, target_isobar,
+                     selected_temp, selected_energy, flux):
+    final_data_points = list()
+    for number_tracked in number_tracked_list:
+        lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
+                                                            fissile_nuclide,
+                                                            target_element,
+                                                            target_isobar,
+                                                            number_tracked,
+                                                            selected_temp,
+                                                            selected_energy,
+                                                            flux)
+        zs = np.linspace(0, z1+z2, spacenodes)
+        dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
+        dt = lmbda * dz / nu1
+        ts = np.arange(0, tf+dt, dt)
+        solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
+                            lams, FYs, dec_fracs, nucs, loss_rates,
+                            vol1, vol2, dz)
+        start = time()
+        result_mat = solver.serial_MORTY_solve()
+        print(f'Ran {number_tracked} in {time() - start}s')
+        xs, ys, ls, u = conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
+                                     ode, savedir, plotting=False)
+        i = 0
+        plt.plot(xs[i], ys[i], label=ls[i] + f' {number_tracked} nuclides')
+        final_data_points.append(ys[i][-1])
+    plt.xlabel(f'Time [{u}]')
+    plt.ylabel('Concentration [at/cc]')
+    plt.yscale('log')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'{savedir}/nuclide_refine.png')
+    plt.close()
+    for data in final_data_points:
+        pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
+        print(f'Percent Diff from most accurate: {pcnt_diff}%')
+    number_tracked = base_number_tracked
+    return
 
 def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spacenodes):
     base_spacenodes = spacenodes
+    final_data_points = list()
     for spacenodes in spacenode_list:
         zs = np.linspace(0, z1+z2, spacenodes)
         dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
@@ -441,6 +482,7 @@ def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spa
                                      ode, savedir, plotting=False)
         i = 0
         plt.plot(xs[i], ys[i], label=ls[i] + f' {spacenodes} nodes')
+        final_data_points.append(ys[i][-1])
     plt.xlabel(f'Time [{u}]')
     plt.ylabel('Concentration [at/cc]')
     plt.yscale('log')
@@ -448,6 +490,9 @@ def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spa
     plt.tight_layout()
     plt.savefig(f'{savedir}/spatial_refine.png')
     plt.close()
+    for data in final_data_points:
+        pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
+        print(f'Percent Diff from most accurate: {pcnt_diff}%')
     spacenodes = base_spacenodes
     return
         
@@ -461,16 +506,18 @@ if __name__ == '__main__':
     scaled_flux = True
     # Analysis
     main_run = False
-    spacenode_list = [50] #[2, 5, 10, 100]
-    spatial_refinement = True
+    spacenode_list = [2, 5, 10, 100, 200, 500]
+    spatial_refinement = False
+    number_tracked_list = [1, 2]
+    nuclide_refinement = True
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
     number_tracked = 1
-    tf = 600 #1.25 * 24 * 3600
+    tf = 3600 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
     target_element = 'Xe'
-    spacenodes = 10
+    spacenodes = 200
     flux = 6E12
     selected_energy = 0.0253
     selected_temp = '294K'
@@ -549,6 +596,13 @@ if __name__ == '__main__':
     if spatial_refinement:
         spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs,
                          loss_rates, spacenodes)
+
+    if nuclide_refinement:
+        nuclide_analysis(number_tracked_list, number_tracked, chain_file,
+                         fissile_nuclide, target_element, target_isobar,
+                         selected_temp, selected_energy, flux)
+
+    
     if main_run:
         conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
                     ode, savedir, ode_result_mat=ode_result_mat)
