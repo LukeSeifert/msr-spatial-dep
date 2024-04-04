@@ -33,7 +33,7 @@ class FormatAssist:
         """
         return_list = []
         for zi, z in enumerate(self.zs):
-            if z < self.z1:
+            if z <= self.z1:
                 if not vector_form:
                     return_list.append(term1)
                 else:
@@ -43,11 +43,6 @@ class FormatAssist:
                     return_list.append(term2)
                 else:
                     return_list.append(term2[zi])
-            else:
-                if not vector_form:
-                    return_list.append(0.5 * (term1 + term2))
-                else:
-                    return_list.append(0.5 * (term1[zi] + term2[zi]))
         return np.asarray(return_list)
 
 
@@ -247,6 +242,7 @@ class DiffEqComp(FormatAssist):
             current = (self.init_conc[0] * np.exp(-self.mu1 * t) +
                        self.S1/self.mu1 * (1 - np.exp(-self.mu1 * t)))
             conc.append(current)
+        print(conc)
         return conc
 
 
@@ -254,16 +250,16 @@ if __name__ == '__main__':
     no_space_ODE = True
     spatial_source_variation = False
     gif = False
-    scaled_flux = True
-    tf = 100  # 324_000
+    scaled_flux = False
+    tf = 3600 #100  # 324_000
     nodes = 40
 
     # MSRE data
     # https://www.tandfonline.com/doi/epdf/10.1080/00295450.2021.1943122 [1]
     # https://github.com/openmsr/msre/blob/master/core/docs/msrecore.pdf [2]
     # https://link.springer.com/article/10.1007/s10967-022-08535-3 [3]
-    incore_frac = 0.33
-    excore_frac = 0.67
+    incore_frac = 1#0.33
+    excore_frac = 0#0.67
     z1 = 200.66  # [2] #272 #[1]
     z2 = (z1 / incore_frac) * excore_frac
 
