@@ -212,12 +212,11 @@ class IsobarSolve(FormatAssist):
 
             for nuclide in range(self.count):
                 self.concs[nuclide] = self._external_PDE_no_step(self.concs[nuclide], nuclide)
-
-            result_mat = self._update_result_mat(result_mat, ti)
+            result_mat = self._update_result_mat(result_mat, ti+1)
 
         return result_mat
 
-    def _external_ODE_no_step(self, conc, isotope, t):
+    def _external_ODE_no_step(self, conc, isotope):
         """
         This function applies a single time step iteration of the ODE
 
@@ -233,10 +232,7 @@ class IsobarSolve(FormatAssist):
         conc : float
             Concentration at current time
         """
-
-        conc = (conc * np.exp(-self.mu[isotope][0] * t) +
-                self.S[isotope][0] / self.mu[isotope][0] *
-                (1 - np.exp(-self.mu[isotope][0] * t)))
+        conc = conc + self.dt * (self.S[isotope][0] - self.mu[isotope][0] * conc)
 
         return conc
 
@@ -246,15 +242,13 @@ class IsobarSolve(FormatAssist):
 
         """
         ODE_result_mat = self._initialize_result_mat(False)
-
-        for ti, t in enumerate(self.ts[:-1]):
+        for ti, t in enumerate(self.ts[1:]):
             self._update_sources(False)
 
             for nuclide in range(self.count):
-                self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide, t)
+                self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide)
 
-            ODE_result_mat = self._update_result_mat(ODE_result_mat, ti)
-
+            ODE_result_mat = self._update_result_mat(ODE_result_mat, ti+1)
         return ODE_result_mat
 
     def parallel_MORTY_solve(self):
@@ -295,6 +289,7 @@ class IsobarSolve(FormatAssist):
 
 def get_tot_xs(cur_target, endf_mt_total, temp):
     has_data = True
+    fiss_xs = 0
     try:
         hdf5_data = openmc.data.IncidentNeutron.from_hdf5(f'/root/nndc_hdf5/{cur_target}.h5')
     except FileNotFoundError:
@@ -302,6 +297,11 @@ def get_tot_xs(cur_target, endf_mt_total, temp):
         has_data = False
     net_xs = 0
     if has_data:
+        try:
+            fiss_xs_f = hdf5_data.reactions[18]._xs[temp]
+            fiss_xs = fiss_xs_f(selected_energy)
+        except KeyError:
+            pass
         for MT in endf_mt_total:
             try:
                 f = hdf5_data.reactions[MT]._xs[temp]
@@ -309,7 +309,7 @@ def get_tot_xs(cur_target, endf_mt_total, temp):
             except KeyError:
                 continue
     net_xs = net_xs * 1e-24
-    return net_xs
+    return net_xs, fiss_xs
 
 
 def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
@@ -335,12 +335,13 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
     i = 0
     feeds = i - 1
     skip_feed = []
+    _, fiss_xs = get_tot_xs(fissile_nuclide, endf_mt_total, temp)
     while i < number_tracked:
         cur_target = f'{target_element}{target_isobar}'
         tracked_nucs[i] = cur_target
         lams[i] = openmc.data.decay_constant(cur_target)
-        FYs[i] = PC * P * yield_fracs[selected_energy][cur_target]
-        net_xs = get_tot_xs(cur_target, endf_mt_total, temp)
+        net_xs, _ = get_tot_xs(cur_target, endf_mt_total, temp)
+        FYs[i] = flux * fiss_xs * yield_fracs[selected_energy][cur_target]
         loss_rates[i] = net_xs * flux
 
         # If doesn't branch to metastable that decays into one of the isobars
@@ -371,7 +372,7 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                 net_xs = get_tot_xs(target, endf_mt_total, temp)
                 loss_rates[i] = net_xs * flux
                 lams[i] = openmc.data.decay_constant(target)
-                FYs[i] = PC * P * yield_fracs[selected_energy][target]
+                FYs[i] = flux * fiss_xs * yield_fracs[selected_energy][target]
                 if "_m" in target:
                     decay_frac[(i, feeds)] = 1
                     skip_feed.append(i)
@@ -399,20 +400,22 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
         units = 's'
     labels = nucs
     core_outlet_node = int(spacenodes * frac_in)
+    if frac_in == 1:
+        core_outlet_node -= 1
     x_vals = list()
     y_vals = list()
     lab_lt = list()
     for i, iso in enumerate(labels):
-        x = ts[:-2] 
+        x = ts
         x_vals.append(x)
-        y = result_mat[0:-2, core_outlet_node, i]
+        y = result_mat[:, core_outlet_node, i]
         y_vals.append(y)
         label = f'{labels[iso]} Exiting Core'
         lab_lt.append(label)
         if plotting:
             plt.plot(x, y, label=label)
         x_vals.append(x)
-        y = result_mat[0:-2, -1, i]
+        y = result_mat[:, -1, i]
         y_vals.append(y)
         label = f'{labels[iso]} Entering Core'
         lab_lt.append(label)
@@ -420,9 +423,9 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
             plt.plot(x, y, label=label)
         
         if ode:
-            x = ts[:-2] 
+            x = ts
             x_vals.append(x)
-            y = ode_result_mat[0:-2, 0, i]
+            y = ode_result_mat[:, 0, i]
             y_vals.append(y)
             label = f'{labels[iso]} ODE'
             lab_lt.append(label)
@@ -451,7 +454,7 @@ def nuclide_analysis(number_tracked_list, base_number_tracked, chain_file,
                                                             number_tracked,
                                                             selected_temp,
                                                             selected_energy,
-                                                            flux)
+                                                            flux, P)
         print(dec_fracs)
         print(nucs)
         zs = np.linspace(0, z1+z2, spacenodes)
@@ -518,19 +521,21 @@ def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spa
 
 if __name__ == '__main__':
     # Test this module using MSRE 135 isobar
+    plt.rcParams["font.size"] = 16
+    plt.rcParams['savefig.dpi'] = 300
     parallel = False
     gif = False
-    ode = False
-    scaled_flux = True
+    ode = True
+    scaled_flux = False
     # Analysis
-    main_run = False
+    main_run = True
     spacenode_list = [2, 5, 10, 100, 200, 500]
     spatial_refinement = False
     number_tracked_list = [1, 2, 3, 4, 5, 6]
-    nuclide_refinement = True
+    nuclide_refinement = False
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
-    number_tracked = 1
+    number_tracked = 1#5
     tf = 3600 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
@@ -544,10 +549,10 @@ if __name__ == '__main__':
     PC = 1 / (3.2e-11)
     P = 8e6  # 8MW
     
-    L = 608.06  # 824.24
+    L = 608.06
     V = 2116111
-    frac_in = 0.33
-    frac_out = 0.67
+    frac_in = 1#0.33
+    frac_out = 0#0.67
     lmbda = 0.9
     z1 = frac_in * L
     z2 = frac_out * L
@@ -559,7 +564,6 @@ if __name__ == '__main__':
     nu = 75708 / xsarea
     nu1 = nu
     nu2 = nu
-    loss_core = 6e12 * 2666886.8E-24
 
     if main_run:
         lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
@@ -585,26 +589,33 @@ if __name__ == '__main__':
             result_mat = solver.parallel_MORTY_solve()
         else:
             result_mat = solver.serial_MORTY_solve()
-        ode_result_mat = None
-        if ode:
-            if scaled_flux:
-                P = 8e6 * frac_in
-                flux = 6E12 * frac_in
-            lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
-                                                                fissile_nuclide,
-                                                                target_element,
-                                                                target_isobar,
-                                                                number_tracked,
-                                                                selected_temp,
-                                                                selected_energy,
-                                                                flux)
-            solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
+        end = time()
+        print(f'Time taken PDE: {round(end-start)}s')
+    ode_result_mat = None
+
+    if ode:
+        if scaled_flux:
+            P = P * frac_in
+            flux = flux * frac_in
+        dz = np.diff(np.linspace(0, z1+z2, spacenodes))[0]
+        lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
+                                                            fissile_nuclide,
+                                                            target_element,
+                                                            target_isobar,
+                                                            number_tracked,
+                                                            selected_temp,
+                                                            selected_energy,
+                                                            flux)
+        solver = IsobarSolve(spacenodes, z1, z2, nu1, nu2, lmbda, tf,
                                 lams, FYs, dec_fracs, nucs, loss_rates,
                                 vol1, vol2, dz)
+        start = time()
+        ode_result_mat = solver.ode_solve()
+        P = P / frac_in
+        flux = flux / frac_in
 
-            ode_result_mat = solver.ode_solve()
         end = time()
-        print(f'Time taken : {round(end-start)}s')
+        print(f'Time taken ODE: {round(end-start)}s')
 
     # Plotting
     savedir = './images'
@@ -612,6 +623,14 @@ if __name__ == '__main__':
         os.makedirs(savedir)
 
     if spatial_refinement:
+        lams, FYs, dec_fracs, nucs, loss_rates = build_data(chain_file,
+                                                            fissile_nuclide,
+                                                            target_element,
+                                                            target_isobar,
+                                                            number_tracked,
+                                                            selected_temp,
+                                                            selected_energy,
+                                                            flux)
         spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs,
                          loss_rates, spacenodes)
 
@@ -637,7 +656,7 @@ if __name__ == '__main__':
             pcnt_diff = ((PDE_val_core_inlet - ODE_val) /
                          (PDE_val_core_inlet) * 100)
             print(f'{labels[iso]} PDE/ODE diff: {round(pcnt_diff, 3)}%')
-
+    
     # Gif
     if main_run and gif:
         print(f'Estimated time to gif completion: {round(0.08 * len(ts))} s')
