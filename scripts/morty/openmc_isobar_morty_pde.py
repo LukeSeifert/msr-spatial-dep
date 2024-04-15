@@ -74,6 +74,7 @@ class IsobarSolve(FormatAssist):
         self.FYs = FYs
         self.vol1 = vol1
         self.vol2 = vol2
+        self.loss_rates = loss_rates
 
         self.mu = {}
         for nuclide in range(self.count):
@@ -213,7 +214,7 @@ class IsobarSolve(FormatAssist):
             for nuclide in range(self.count):
                 self.concs[nuclide] = self._external_PDE_no_step(self.concs[nuclide], nuclide)
             result_mat = self._update_result_mat(result_mat, ti+1)
-
+        self.result_mat = result_mat
         return result_mat
 
     def _external_ODE_no_step(self, conc, isotope):
@@ -249,6 +250,7 @@ class IsobarSolve(FormatAssist):
                 self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide)
 
             ODE_result_mat = self._update_result_mat(ODE_result_mat, ti+1)
+        self.result_mat = ODE_result_mat
         return ODE_result_mat
 
     def parallel_MORTY_solve(self):
@@ -286,6 +288,20 @@ class IsobarSolve(FormatAssist):
             result_mat = self._update_result_mat(result_mat, ti)
 
         return result_mat
+    
+    def parasitic_abs(self):
+        """
+        Calculates the amount of parasitic absorption for each nuclide
+        """
+        parasitic_abs = []
+        for nuclide in range(self.count):
+            each = []
+            for ti, t in enumerate(self.ts):
+                spat_avg_conc = np.mean(self.result_mat[ti, :, nuclide])
+                parasitic = spat_avg_conc * self.loss_rates[nuclide]
+                each.append(parasitic)
+            parasitic_abs.append(each)
+        return parasitic_abs
 
 def get_tot_xs(cur_target, endf_mt_total, temp):
     has_data = True
@@ -369,7 +385,7 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
                 if i >= number_tracked:
                     break
                 tracked_nucs[i] = target
-                net_xs = get_tot_xs(target, endf_mt_total, temp)
+                net_xs, _ = get_tot_xs(target, endf_mt_total, temp)
                 loss_rates[i] = net_xs * flux
                 lams[i] = openmc.data.decay_constant(target)
                 FYs[i] = flux * fiss_xs * yield_fracs[selected_energy][target]
@@ -390,9 +406,11 @@ def build_data(chain_path, fissile_nuclide, target_element, target_isobar,
         target_element = atomic_symbols[target_atomic_number]
         prev_target = cur_target
     return lams, FYs, decay_frac, tracked_nucs, loss_rates
+ 
 
 def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
-                 ode, savedir, ode_result_mat=None, plotting=True):
+                 ode, savedir, ode_result_mat=None, plotting=True,
+                 parasitic_data=None, ode_parasitic_data=None):
     if tf > 3600 * 24:
         ts = ts / (3600*24)
         units = 'd'
@@ -440,6 +458,40 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
             plt.tight_layout()
             plt.savefig(f'{savedir}/nuc_{labels[iso]}_conc_time.png')
             plt.close()
+
+    x_vals = list()
+    y_vals = list()
+    lab_lt = list()
+    for isoi, iso in enumerate(labels):
+        if type(parasitic_data) != type(None):
+            x = ts
+            x_vals.append(x)
+            y = parasitic_data[isoi]
+            y_vals.append(y)
+            label = f'{labels[iso]} Parasitic Absorption'
+            lab_lt.append(label)
+            if plotting:
+                plt.plot(x, y, label=label)
+
+        if type(ode_parasitic_data) != type(None):
+            x = ts
+            x_vals.append(x)
+            y = ode_parasitic_data[isoi]
+            y_vals.append(y)
+            label = f'{labels[iso]} ODE Parasitic Absorption'
+            lab_lt.append(label)
+            if plotting:
+                plt.plot(x, y, label=label)
+        
+        if plotting:
+            plt.xlabel(f'Time [{units}]')
+            plt.ylabel('Concentration [at/cc]')
+            plt.yscale('log')
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(f'{savedir}/nuc_{labels[iso]}_paras_time.png')
+            plt.close()
+
     return x_vals, y_vals, lab_lt, units
 
 def nuclide_analysis(number_tracked_list, base_number_tracked, chain_file,
@@ -466,9 +518,10 @@ def nuclide_analysis(number_tracked_list, base_number_tracked, chain_file,
                             vol1, vol2, dz)
         start = time()
         result_mat = solver.serial_MORTY_solve()
+        parasitic_mat = solver.parasitic_abs()
         print(f'Ran {number_tracked} in {time() - start}s')
         xs, ys, ls, u = conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
-                                     ode, savedir, plotting=False)
+                                     ode, savedir, plotting=False, parasitic_data=parasitic_mat)
         i = 0
         plt.plot(xs[i], ys[i], label=ls[i] + f' {number_tracked} nuclides')
         final_data_points.append(ys[i][-1])
@@ -498,9 +551,10 @@ def spatial_analysis(spacenode_list, lams, FYs, dec_fracs, nucs, loss_rates, spa
                             vol1, vol2, dz)
         start = time()
         result_mat = solver.serial_MORTY_solve()
+        parasitic_mat = solver.parasitic_abs()
         print(f'Ran {spacenodes} in {time() - start}s')
         xs, ys, ls, u = conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
-                                     ode, savedir, plotting=False)
+                                     ode, savedir, plotting=False, parasitic_data=parasitic_mat)
         i = 0
         plt.plot(xs[i], ys[i], label=ls[i] + f' {spacenodes} nodes')
         final_data_points.append(ys[i][-1])
@@ -526,7 +580,7 @@ if __name__ == '__main__':
     parallel = False
     gif = False
     ode = True
-    scaled_flux = False
+    scaled_flux = True
     # Analysis
     main_run = True
     spacenode_list = [2, 5, 10, 100, 200, 500]
@@ -535,8 +589,8 @@ if __name__ == '__main__':
     nuclide_refinement = False
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
-    number_tracked = 1#5
-    tf = 3600 #1.25 * 24 * 3600
+    number_tracked = 5
+    tf = 100 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
     target_element = 'Xe'
@@ -551,8 +605,8 @@ if __name__ == '__main__':
     
     L = 608.06
     V = 2116111
-    frac_in = 1#0.33
-    frac_out = 0#0.67
+    frac_in = 0.33
+    frac_out = 0.67
     lmbda = 0.9
     z1 = frac_in * L
     z2 = frac_out * L
@@ -587,8 +641,10 @@ if __name__ == '__main__':
         start = time()
         if parallel:
             result_mat = solver.parallel_MORTY_solve()
+            parasitic_mat = solver.parasitic_abs()
         else:
             result_mat = solver.serial_MORTY_solve()
+            parasitic_mat = solver.parasitic_abs()
         end = time()
         print(f'Time taken PDE: {round(end-start)}s')
     ode_result_mat = None
@@ -611,6 +667,7 @@ if __name__ == '__main__':
                                 vol1, vol2, dz)
         start = time()
         ode_result_mat = solver.ode_solve()
+        ode_parasitic_mat = solver.parasitic_abs()
         P = P / frac_in
         flux = flux / frac_in
 
@@ -642,7 +699,9 @@ if __name__ == '__main__':
     
     if main_run:
         conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
-                    ode, savedir, ode_result_mat=ode_result_mat)
+                    ode, savedir, ode_result_mat=ode_result_mat,
+                    parasitic_data=parasitic_mat,
+                    ode_parasitic_data=ode_parasitic_mat)
         labels = nucs
 
     if main_run and ode:
