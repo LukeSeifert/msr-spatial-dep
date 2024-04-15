@@ -6,6 +6,7 @@ import os
 import openmc
 import openmc.data
 import openmc.deplete
+from scipy import integrate
 
 
 class IsobarSolve(FormatAssist):
@@ -300,7 +301,9 @@ class IsobarSolve(FormatAssist):
                 spat_avg_conc = np.mean(self.result_mat[ti, :, nuclide])
                 parasitic = spat_avg_conc * self.loss_rates[nuclide]
                 each.append(parasitic)
-            parasitic_abs.append(each)
+            integral_form = integrate.cumtrapz(each, self.ts)
+            integral_form = np.insert(integral_form, 0, 0.0)
+            parasitic_abs.append(integral_form)
         return parasitic_abs
 
 def get_tot_xs(cur_target, endf_mt_total, temp):
@@ -485,7 +488,7 @@ def conc_plotter(tf, ts, nucs, spacenodes, frac_in, result_mat,
         
         if plotting:
             plt.xlabel(f'Time [{units}]')
-            plt.ylabel('Concentration [at/cc]')
+            plt.ylabel('Net Parasitic Absorptions [at/cc]')
             plt.yscale('log')
             plt.legend()
             plt.tight_layout()
@@ -590,7 +593,7 @@ if __name__ == '__main__':
     savedir = './images'
     chain_file = '../../data/chain_endfb71_pwr.xml'
     number_tracked = 5
-    tf = 100 #1.25 * 24 * 3600
+    tf = 1000 #1.25 * 24 * 3600
     fissile_nuclide = 'U235'
     target_isobar = '135'
     target_element = 'Xe'
