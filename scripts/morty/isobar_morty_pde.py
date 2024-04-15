@@ -78,7 +78,7 @@ class IsobarSolve(FormatAssist):
         self.mu['d'] = self._format_spatial((lams['d'] + losses['1d']),
                                             (lams['d'] + losses['2d']))
         self.S = {}
-        self.S['a'] = self._format_spatial((FYs['a']/vol1), (0/vol2))
+        self.S['a'] = self._format_spatial((FYs['a']/vol1), (0))
 
         self.lama = lams['a']
         self.lamb = lams['b']
@@ -185,7 +185,7 @@ class IsobarSolve(FormatAssist):
                                            (self.conc_b*self.lama),
                                            vector_form=vector_form)
         self.S['d_m1'] = self._format_spatial((self.FYd_m1/self.vol1),
-                                              (0/self.vol2))
+                                              (0))
         self.S['d'] = self._format_spatial((self.br_c_d*self.conc_c*self.lamc
                                             + self.FYd/self.vol1
                                             + self.br_dm1_d
@@ -263,7 +263,6 @@ class IsobarSolve(FormatAssist):
         conc : float
             Concentration at current time
         """
-
         conc = (conc * np.exp(-self.mu[isotope][0] * t) +
                 self.S[isotope][0] / self.mu[isotope][0] *
                 (1 - np.exp(-self.mu[isotope][0] * t)))
@@ -334,19 +333,23 @@ class IsobarSolve(FormatAssist):
 
 if __name__ == '__main__':
     # Test this module using MSRE 135 isobar
+    plt.rcParams["font.size"] = 16
+    plt.rcParams['savefig.dpi'] = 300
     parallel = False
     gif = False
     ode = True
-    scaled_flux = True
+    scaled_flux = False
     savedir = './images'
-    tf = 30 #1.25 * 24 * 3600
-    spacenodes = 100
+    tf = 3600 #1.25 * 24 * 3600
+    spacenodes = 200
 
     L = 608.06  # 824.24
     V = 2116111
-    frac_in = 0.33
-    frac_out = 0.67
+    frac_in = 1#0.33
+    frac_out = 0#0.67
     core_outlet_node = int(spacenodes * frac_in)
+    if frac_in == 1:
+        core_outlet_node -= 1
     z1 = frac_in * L
     z2 = frac_out * L
     vol1 = frac_in * V
