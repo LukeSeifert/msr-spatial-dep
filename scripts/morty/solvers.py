@@ -22,7 +22,35 @@ class DiffEqSolvers:
         """
         self.spacenodes = run_params['spacenodes']
         self.num_nucs = run_params['num_nuclides']
-        self.times = run_params['times']
+        self.final_time = run_params['final_time']
+        self.z_excore_outlet = run_params['excore_outlet']
+        self.CFL_cond = run_params['CFL_cond']
+        self.incore_flowrate = run_params['incore_flowrate']
+        self.excore_flowrate = run_params['excore_flowrate']
+        self.incore_volume = run_params['incore_volume']
+        
+
+        self.dz = np.diff(np.linspace(0, self.z_excore_outlet,
+                                      self.spacenodes))[0]
+        self.flow_vec = self._format_spatial(self.incore_flowrate,
+                                           self.excore_flowrate)
+        max_flowrate = max(self.incore_flowrate, self.excore_flowrate)
+        self.dt = self.CFL_cond * self.dz / max_flowrate
+        self.times = np.arange(0, self.final_time+self.dt, self.dt)
+
+        self.lams = data_params['lams']
+        self.loss_rates = data_params['loss_rates']
+        self.dec_fracs = data_params['dec_frac']
+        self.FYs = data_params['FYs']
+
+        self.mu = {}
+        for nuclide in range(self.num_nucs):
+            incore_losses = self.lams[nuclide] + self.loss_rates[nuclide]
+            excore_losses = self.lams[nuclide]
+            cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
+            self.mu[nuclide] = cur_nuc_losses
+
+        self.S = {}
         return
     
     def _format_spatial(self, term1, term2):
@@ -95,10 +123,10 @@ class DiffEqSolvers:
         Update source terms based on concentrations
 
         """
-        for gain_nuc in range(self.nuc_count):
-            fission_source = self.FYs[gain_nuc]/self.vol1
+        for gain_nuc in range(self.num_nucs):
+            fission_source = self.FYs[gain_nuc]/self.incore_volume
             decay_source = np.asarray(self.concs[gain_nuc] * 0.0)
-            for loss_nuc in range(self.nuc_count):
+            for loss_nuc in range(self.num_nucs):
                 try:
                     frac = self.dec_fracs[(loss_nuc, gain_nuc)]
                     decay_source += (frac * self.concs[loss_nuc] * self.lams[loss_nuc])
@@ -148,6 +176,35 @@ class DiffEqSolvers:
         """
         conc = (conc + self.dt * (self.S[nuclide_index][0] -
                                   self.mu[nuclide_index][0] * conc))
+
+        return conc
+
+    def _external_PDE_no_step(self, conc, nuclide_index):
+        """
+        This function applies a single time step iteration of the PDE
+
+        Parameters
+        ----------
+        conc : :class:`np.ndarray`
+            Concentration over spatial nodes at previous time
+        isotope : int
+            Nuclide isobar indicator
+
+        Returns
+        -------
+        conc : 1D vector
+            Concentration over spatial nodes at current time
+        """
+        S_vec = self.S[nuclide_index]
+        mu_vec = self.mu[nuclide_index]
+        J = np.arange(0, self.spacenodes)
+        Jm1 = np.roll(J,  1)
+        dz = np.diff(self.zs)[0]
+
+        conc_mult = 1 - mu_vec * self.dt
+        add_source = S_vec * self.dt
+        lmbda = (self.flow_vec * self.dt / dz)
+        conc = add_source + conc_mult * conc + self.CFL_cond * (conc[Jm1] - conc)
 
         return conc
 

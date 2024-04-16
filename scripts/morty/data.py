@@ -142,7 +142,7 @@ class DataHandler:
         data_params = {}
         data_params['lams'] = lams
         data_params['FYs'] = FYs
-        data_params['decay_frac'] = decay_frac
+        data_params['dec_frac'] = decay_frac
         data_params['tracked_nucs'] = tracked_nucs
         data_params['loss_rates'] = loss_rates
         return data_params
@@ -214,7 +214,7 @@ class DataHandler:
         data_params = {}
         data_params['lams'] = lams
         data_params['FYs'] = FYs
-        data_params['decay_frac'] = decay_frac
+        data_params['dec_frac'] = decay_frac
         data_params['tracked_nucs'] = tracked_nucs
         data_params['loss_rates'] = loss_rates
         return data_params
