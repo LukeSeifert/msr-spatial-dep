@@ -1,3 +1,6 @@
+import solvers
+import data
+
 def check_data(run_params, allowed_params):
     """
     Check that each item in run_params is in the allowed
@@ -27,15 +30,18 @@ if __name__ == '__main__':
     run_params['num_nuclides'] = 1
     run_params['data_gen_option'] = 'openmc'
     run_params['final_time'] = 100
+    run_params['solver_method'] = 'PDE'
 
     allowed_params = {}
     available_temperatures = ['294K']
     available_energies = [0.0253, 500_000, 14_000_000]
     available_data = ['openmc', 'hardcoded']
+    available_methods = ['PDE', 'ODE']
 
     allowed_params['temperature'] = available_temperatures
     allowed_params['neutron_energy'] = available_energies
     allowed_params['data_gen_option'] = available_data
+    allowed_params['solver_method'] = available_methods
 
 
 
@@ -43,3 +49,5 @@ if __name__ == '__main__':
 
 
     check_data(run_params, allowed_params)
+    data_params = data.DataHandler(run_params)
+    result_matrix = solvers.DiffEqSolvers(run_params, data_params)

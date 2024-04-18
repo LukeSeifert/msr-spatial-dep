@@ -1,7 +1,7 @@
 import numpy as np
 
 class DataHandler:
-    def __init__(self, run_params, data_gen_option='openmc'):
+    def __init__(self, run_params):
         """
         This class handles the data for use in the PDE/ODE solvers.
 
@@ -23,6 +23,7 @@ class DataHandler:
         self.target_isobar = run_params['target_isobar']
         self.num_nucs = run_params['num_nuclides']
         self.nuclide_target = self.target_element + self.target_isobar
+        data_gen_option = run_params['data_gen_option']
         if data_gen_option == 'openmc':
             import openmc
             import openmc.data

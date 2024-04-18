@@ -51,7 +51,13 @@ class DiffEqSolvers:
             self.mu[nuclide] = cur_nuc_losses
 
         self.S = {}
-        return
+
+        if run_params['solver_methods'] == 'PDE':
+            res_mat = self.PDE_solver()
+        elif run_params['solver_methods'] == 'ODE':
+            res_mat = self.ode_solve()
+        
+        return res_mat
     
     def _format_spatial(self, term1, term2):
         """
