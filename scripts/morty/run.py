@@ -1,10 +1,21 @@
 import solvers
 import data
+import analysis
+import numpy as np
 
 def check_data(run_params, allowed_params):
     """
     Check that each item in run_params is in the allowed
         parameters
+
+    Parameters
+    ----------
+    run_params : dict
+        key : str
+            Name of run parameter
+    allowed_params : dict
+        key : str
+            Name of allowed parameter
     
     """
     for key in allowed_params.keys():
@@ -18,6 +29,10 @@ def check_data(run_params, allowed_params):
 
 
 if __name__ == '__main__':
+    analysis_params = {}
+    analysis_params['test_run'] = False
+    analysis_params['PDE_ODE_compare'] = True
+
     run_params = {}
     run_params['openmc_data_path'] = '/root/nndc_hdf5/'
     run_params['temperature'] = '294K'
@@ -31,6 +46,29 @@ if __name__ == '__main__':
     run_params['data_gen_option'] = 'openmc'
     run_params['final_time'] = 100
     run_params['solver_method'] = 'PDE'
+    run_params['flux'] = 6e12
+    run_params['net_length'] = 608.06
+    run_params['frac_in'] = 0.33
+    run_params['frac_out'] = 1 - run_params['frac_in']
+    run_params['excore_outlet'] = (run_params['net_length'] * run_params['frac_in'])
+    run_params['core_outlet']   = (run_params['net_length'] * run_params['frac_out'])
+    run_params['CFL_cond'] = 0.9
+    vol_flow_rate = 75708
+    fuel_fraction = 0.225
+    core_rad = 140.335/2
+    net_cc_vol = 2_116_111
+
+
+    run_params['incore_volume'] = net_cc_vol * run_params['frac_in']
+    linear_flow_rate = (vol_flow_rate / (fuel_fraction * np.pi * (core_rad)**2))
+    run_params['incore_flowrate'] = linear_flow_rate
+    run_params['excore_flowrate'] = linear_flow_rate
+    max_flowrate = max(run_params['incore_flowrate'], run_params['excore_flowrate'])
+    run_params['dz'] = np.diff(np.linspace(0, run_params['excore_outlet'], run_params['spacenodes']))[0]
+    run_params['positions'] = np.linspace(0, run_params['excore_outlet'], run_params['spacenodes'])
+    run_params['dt'] = run_params['CFL_cond'] * run_params['dz'] / max_flowrate
+    run_params['times'] = np.arange(0, run_params['final_time']+run_params['dt'], run_params['dt'])
+
 
     allowed_params = {}
     available_temperatures = ['294K']
@@ -44,10 +82,12 @@ if __name__ == '__main__':
     allowed_params['solver_method'] = available_methods
 
 
-
-
-
-
     check_data(run_params, allowed_params)
-    data_params = data.DataHandler(run_params)
-    result_matrix = solvers.DiffEqSolvers(run_params, data_params)
+    data_params = data.DataHandler(run_params).data_params
+
+    analyzer = analysis.AnalysisCollection(analysis_params, run_params, data_params)
+    if analysis_params['test_run']:
+        result_matrix = solvers.DiffEqSolvers(run_params, data_params).result_mat
+    
+    if analysis_params['PDE_ODE_compare']:
+        data_dict = analyzer.ode_pde_compare()

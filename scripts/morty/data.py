@@ -11,25 +11,18 @@ class DataHandler:
             key : str
                 Name of run parameter
         
-        Returns
-        -------
-        data_params : dict
-            key : str
-                Name of data parameter
-
         """
         self.fissile_nuclide = run_params['fissile_nuclide']
         self.target_element = run_params['target_element']
         self.target_isobar = run_params['target_isobar']
         self.num_nucs = run_params['num_nuclides']
+        self.flux = run_params['flux']
         self.nuclide_target = self.target_element + self.target_isobar
         data_gen_option = run_params['data_gen_option']
         if data_gen_option == 'openmc':
-            import openmc
             import openmc.data
-            import openmc.deplete
             self.openmc_data_path = run_params['openmc_data_path']
-            self.cur_target = run_params['nuclide_target']
+            self.cur_target = self.nuclide_target
             self.temp = run_params['temperature']
             self.energy = run_params['neutron_energy']
             self.atomic_numbers = openmc.data.ATOMIC_NUMBER
@@ -39,15 +32,16 @@ class DataHandler:
                                   103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
                                   114, 115, 116, 117]
             self.chain_path = run_params['chain_path']
-            data_params = self.openmc_data_gen()
+            self.data_params = self.openmc_data_gen()
         elif data_gen_option == 'hardcoded':
-            data_params = self.hardcoded_data_gen()
+            self.data_params = self.hardcoded_data_gen()
         else:
             raise NotImplementedError('Invalid data_gen_option in DataHandler')
-        return data_params
+        return
     
 
     def _get_tot_xs(self):
+        import openmc.data
         has_data = True
         fiss_xs = 0
         try:
@@ -84,6 +78,7 @@ class DataHandler:
             value : dict
                 Dictionary of results
         """
+        import openmc.deplete
         lams = {}
         FYs = {}
         loss_rates = {}

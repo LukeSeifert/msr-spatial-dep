@@ -24,19 +24,19 @@ class DiffEqSolvers:
         self.num_nucs = run_params['num_nuclides']
         self.final_time = run_params['final_time']
         self.z_excore_outlet = run_params['excore_outlet']
+        self.z_core_outlet = run_params['core_outlet']
         self.CFL_cond = run_params['CFL_cond']
         self.incore_flowrate = run_params['incore_flowrate']
         self.excore_flowrate = run_params['excore_flowrate']
         self.incore_volume = run_params['incore_volume']
         
+        self.dz = run_params['dz']
+        self.positions = run_params['positions']
+        self.dt = run_params['dt']
+        self.times = run_params['times']
 
-        self.dz = np.diff(np.linspace(0, self.z_excore_outlet,
-                                      self.spacenodes))[0]
         self.flow_vec = self._format_spatial(self.incore_flowrate,
                                            self.excore_flowrate)
-        max_flowrate = max(self.incore_flowrate, self.excore_flowrate)
-        self.dt = self.CFL_cond * self.dz / max_flowrate
-        self.times = np.arange(0, self.final_time+self.dt, self.dt)
 
         self.lams = data_params['lams']
         self.loss_rates = data_params['loss_rates']
@@ -52,12 +52,12 @@ class DiffEqSolvers:
 
         self.S = {}
 
-        if run_params['solver_methods'] == 'PDE':
-            res_mat = self.PDE_solver()
-        elif run_params['solver_methods'] == 'ODE':
-            res_mat = self.ode_solve()
+        if run_params['solver_method'] == 'PDE':
+            self.res_mat = self.PDE_solver()
+        elif run_params['solver_method'] == 'ODE':
+            self.res_mat = self.ode_solve()
         
-        return res_mat
+        return
     
     def _format_spatial(self, term1, term2):
         """
@@ -77,13 +77,13 @@ class DiffEqSolvers:
             Spatial distribution of values at each point
 
         """
-        return_list = np.zeros(self.zs)
-        if type(term1) == float:
-            vector_form = False
-        else:
+        return_list = np.zeros(self.spacenodes)
+        if np.size(term1) > 1:
             vector_form = True
+        else:
+            vector_form = False
 
-        for zi, z in enumerate(self.zs):
+        for zi, z in enumerate(self.positions):
             if vector_form:
                 incore_term = term1[zi]
                 excore_term = term2[zi]
@@ -92,9 +92,9 @@ class DiffEqSolvers:
                 excore_term = term2
 
             if z <= self.z_core_outlet:
-                return_list.append(incore_term)
+                return_list[zi] = incore_term
             elif z > self.z_core_outlet:
-                return_list.append(excore_term)
+                return_list[zi] = excore_term
 
         return np.asarray(return_list)
 
@@ -160,7 +160,7 @@ class DiffEqSolvers:
         result_mat : 3D matrix
             Holds values over time, space, and nuclide (in that order)
         """
-        for nuclide in range(self.count):
+        for nuclide in range(self.num_nucs):
             result_mat[time_index, :, nuclide] = self.concs[nuclide]
         return result_mat
 
@@ -205,7 +205,7 @@ class DiffEqSolvers:
         mu_vec = self.mu[nuclide_index]
         J = np.arange(0, self.spacenodes)
         Jm1 = np.roll(J,  1)
-        dz = np.diff(self.zs)[0]
+        dz = np.diff(self.positions)[0]
 
         conc_mult = 1 - mu_vec * self.dt
         add_source = S_vec * self.dt
@@ -219,11 +219,12 @@ class DiffEqSolvers:
         Solve the time dependent ODE
 
         """
+        self._initialize_concs()
         ODE_result_mat = self._initialize_result_mat()
         for ti, t in enumerate(self.times[1:]):
             self._update_sources()
 
-            for nuclide in range(self.count):
+            for nuclide in range(self.num_nucs):
                 self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide)
 
             ODE_result_mat = self._update_result_mat(ODE_result_mat, ti+1)
