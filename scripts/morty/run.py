@@ -50,8 +50,8 @@ if __name__ == '__main__':
     run_params['net_length'] = 608.06
     run_params['frac_in'] = 0.33
     run_params['frac_out'] = 1 - run_params['frac_in']
-    run_params['excore_outlet'] = (run_params['net_length'] * run_params['frac_in'])
     run_params['core_outlet']   = (run_params['net_length'] * run_params['frac_out'])
+    run_params['excore_outlet'] = run_params['core_outlet'] + (run_params['net_length'] * run_params['frac_in'])
     run_params['CFL_cond'] = 0.9
     vol_flow_rate = 75708
     fuel_fraction = 0.225
