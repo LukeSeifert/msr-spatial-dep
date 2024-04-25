@@ -34,8 +34,8 @@ if __name__ == '__main__':
     image_directory = './images/'
     analysis_params = {}
     analysis_params['test_run'] = False
-    analysis_params['PDE_ODE_compare'] = False
-    analysis_params['nuclide_refinement'] = True
+    analysis_params['PDE_ODE_compare'] = True
+    analysis_params['nuclide_refinement'] = False
     analysis_params['spatial_refinement'] = False
 
     run_params = {}
@@ -49,17 +49,19 @@ if __name__ == '__main__':
     run_params['spacenodes'] = 200
     run_params['num_nuclides'] = 2
     run_params['data_gen_option'] = 'openmc'
-    run_params['final_time'] = 1000
+    run_params['final_time'] = 3600
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 6e12
     run_params['net_length'] = 608.06
     run_params['frac_in'] = 0.33
     run_params['CFL_cond'] = 0.9
+    run_params['power_W'] = 8e6
 
     run_params['vol_flow_rate'] = 75708
     run_params['fuel_fraction'] = 0.225
     run_params['core_rad'] = 140.335/2
     run_params['net_cc_vol'] = 2_116_111
+    run_params['J_per_fiss'] = 3.2e-11
 
 
 
@@ -83,10 +85,12 @@ if __name__ == '__main__':
     plotter_tool = plotter.PlotterCollection(image_directory)
 
     if analysis_params['test_run']:
+        print('-'*50)
         result_matrix = solvers.DiffEqSolvers(run_params, data_params).result_mat
         print(result_matrix)
     
     if analysis_params['PDE_ODE_compare']:
+        print('-'*50)
         data_dict = analyzer.ode_pde_compare()
         if plotting:
             plotter_tool.plot_time(data_dict)
@@ -94,12 +98,14 @@ if __name__ == '__main__':
             plotter_tool.plot_time(data_dict, core_outlet_node)
     
     if analysis_params['nuclide_refinement']:
+        print('-'*50)
         data_dict = analyzer.nuclide_refinement(max_nuc=5)
         if plotting:
             plotter_tool.plot_time(data_dict)
 
     if analysis_params['spatial_refinement']:
-        spatial_nodes = [2, 5]#[2, 5, 10, 100, 200, 500]
+        print('-'*50)
+        spatial_nodes = [2, 5, 10, 100, 200, 500]
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         if plotting:
             plotter_tool.plot_time(data_dict)

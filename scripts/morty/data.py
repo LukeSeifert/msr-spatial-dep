@@ -19,6 +19,7 @@ class DataHandler:
         self.flux = run_params['flux']
         self.nuclide_target = self.target_element + self.target_isobar
         data_gen_option = run_params['data_gen_option']
+        self.run_params = run_params
         if data_gen_option == 'openmc':
             import openmc.data
             self.openmc_data_path = run_params['openmc_data_path']
@@ -55,7 +56,8 @@ class DataHandler:
         if has_data:
             try:
                 fiss_xs_f = hdf5_data_fissile.reactions[fission_MT]._xs[self.temp]
-                fiss_xs = fiss_xs_f(self.energy)
+                fiss_xs = fiss_xs_f(self.energy) * 1e-24
+                self.run_params['fissile_atoms'] = self.run_params['power_W'] / (self.run_params['J_per_fiss'] * self.run_params['flux'] * fiss_xs)
             except KeyError:
                 print(f'No fission cross section')
                 pass
@@ -66,7 +68,7 @@ class DataHandler:
                 except KeyError:
                     continue
         net_xs = net_xs * 1e-24
-        fiss_xs = fiss_xs * 1e-24
+        fiss_xs = fiss_xs * self.run_params['fissile_atoms']
         return net_xs, fiss_xs
 
 
