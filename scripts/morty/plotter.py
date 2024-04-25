@@ -59,7 +59,6 @@ class PlotterCollection:
                     try:
                         y = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
                     except KeyError:
-                        print(f'Fail: {i=} {nuclide_i=}')
                         continue
                     ending = 'avg'
                 else:

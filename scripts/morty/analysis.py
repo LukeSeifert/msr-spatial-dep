@@ -105,6 +105,7 @@ class AnalysisCollection:
         
         num_nucs = max(num_nucs)
         for nuclide_i in range(num_nucs):
+            final_data_points = []
             for i, x in enumerate(self.data['xs']):
                 nuclide = self.data_params['tracked_nucs'][nuclide_i]
                 try:
@@ -114,6 +115,11 @@ class AnalysisCollection:
                 lab = f'{self.data["labs"][i]} {nuclide}'
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
+                final_data_points.append(y[-1])
+        
+            for data in final_data_points:
+                pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
+                print(f'Percent Diff of {lab} from most accurate: {pcnt_diff}%')
         return
     
     def ode_pde_compare(self):

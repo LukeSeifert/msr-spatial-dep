@@ -1,4 +1,5 @@
 import numpy as np
+from time import time
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -67,10 +68,13 @@ class DiffEqSolvers:
         self.run_params = run_params
 
         if run:
+            start = time()
             if run_params['solver_method'] == 'PDE':
                 self.res_mat = self.PDE_solver()
             elif run_params['solver_method'] == 'ODE':
                 self.res_mat = self.ode_solve()
+            took = time() - start
+            print(f'Took {round(took, 3)} seconds')
         
         return
     
