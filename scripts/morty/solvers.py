@@ -1,7 +1,7 @@
 import numpy as np
 
 class DiffEqSolvers:
-    def __init__(self, run_params, data_params):
+    def __init__(self, run_params, data_params, run=True):
         """
         This class allows for the solve of a system of PDEs by
         solving each individually in a Jacobi-like manner.
@@ -23,13 +23,26 @@ class DiffEqSolvers:
         self.spacenodes = run_params['spacenodes']
         self.num_nucs = run_params['num_nuclides']
         self.final_time = run_params['final_time']
+        run_params['frac_out'] = 1 - run_params['frac_in']
+        run_params['core_outlet']   = (run_params['net_length'] * run_params['frac_out'])
+        run_params['excore_outlet'] = run_params['core_outlet'] + (run_params['net_length'] * run_params['frac_in'])
         self.z_excore_outlet = run_params['excore_outlet']
         self.z_core_outlet = run_params['core_outlet']
         self.CFL_cond = run_params['CFL_cond']
+        
+        run_params['incore_volume'] = run_params['net_cc_vol'] * run_params['frac_in']
+        linear_flow_rate = (run_params['vol_flow_rate'] / (run_params['fuel_fraction'] * np.pi * (run_params['core_rad'])**2))
+        run_params['incore_flowrate'] = linear_flow_rate
+        run_params['excore_flowrate'] = linear_flow_rate
+        run_params['max_flowrate'] = max(run_params['incore_flowrate'], run_params['excore_flowrate'])
+        run_params['dz'] = np.diff(np.linspace(0, run_params['excore_outlet'], run_params['spacenodes']))[0]
+        run_params['positions'] = np.linspace(0, run_params['excore_outlet'], run_params['spacenodes'])
+        run_params['dt'] = run_params['CFL_cond'] * run_params['dz'] / run_params['max_flowrate']
+        run_params['times'] = np.arange(0, run_params['final_time']+run_params['dt'], run_params['dt'])
+
         self.incore_flowrate = run_params['incore_flowrate']
         self.excore_flowrate = run_params['excore_flowrate']
         self.incore_volume = run_params['incore_volume']
-        
         self.dz = run_params['dz']
         self.positions = run_params['positions']
         self.dt = run_params['dt']
@@ -51,11 +64,13 @@ class DiffEqSolvers:
             self.mu[nuclide] = cur_nuc_losses
 
         self.S = {}
+        self.run_params = run_params
 
-        if run_params['solver_method'] == 'PDE':
-            self.res_mat = self.PDE_solver()
-        elif run_params['solver_method'] == 'ODE':
-            self.res_mat = self.ode_solve()
+        if run:
+            if run_params['solver_method'] == 'PDE':
+                self.res_mat = self.PDE_solver()
+            elif run_params['solver_method'] == 'ODE':
+                self.res_mat = self.ode_solve()
         
         return
     

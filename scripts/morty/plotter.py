@@ -4,18 +4,12 @@ import os
 import numpy as np
 
 class PlotterCollection:
-    def __init__(self, num_nucs, imdir='./images/'):
+    def __init__(self, imdir='./images/'):
         """
         This class holds various plotters
 
         Parameters
         ----------
-        run_params : dict
-            key : str
-                Name of run parameter
-        data_params : dict
-            ket : str
-                Name of data parameter
         imdir : str
             Path to image directory
 
@@ -38,12 +32,11 @@ class PlotterCollection:
         plt.rcParams["figure.autolayout"] = True
         plt.rcParams['savefig.dpi'] = 300
         self.imdir = imdir
-        self.num_nucs = num_nucs
         if not os.path.isdir(self.imdir):
             os.mkdir(self.imdir)
         return
     
-    def plot_time(self, data_dict):
+    def plot_time(self, data_dict, spatial_eval_node=None):
         """
         Plots average data over time where `data_dict` contains all
          necessary information
@@ -53,25 +46,33 @@ class PlotterCollection:
         data_dict : dict
             key : str
                 Variable name
+        spatial_eval_node : int (optional)
+            Spatial node index to evaluate    
         """
-        for nuclide_i in range(self.num_nucs):
+        num_nucs = []
+        for i, x in enumerate(data_dict['xs']):
+            num_nucs.append(np.shape(data_dict['ys'][i])[2])
+        num_nucs = max(num_nucs)
+        for nuclide_i in range(num_nucs):
             for i, x in enumerate(data_dict['xs']):
-                y = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
+                if type(spatial_eval_node) == type(None):
+                    try:
+                        y = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
+                    except KeyError:
+                        print(f'Fail: {i=} {nuclide_i=}')
+                        continue
+                    ending = 'avg'
+                else:
+                    try:
+                        y = data_dict['ys'][i][:, spatial_eval_node, nuclide_i]
+                    except IndexError:
+                        continue
+                    ending = f'spat{spatial_eval_node}'
                 lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
                 plt.plot(x, y, label=lab)
             plt.xlabel(data_dict['xlab'])
             plt.ylabel(data_dict['ylab'])
             plt.legend()
-            plt.savefig(f'{self.imdir}{data_dict["savename"]}_{nuclide_i}.png')
+            plt.savefig(f'{self.imdir}{data_dict["savename"]}_{nuclide_i}_{ending}.png')
             plt.close()
-        for nuclide_i in range(self.num_nucs):
-            for i, x in enumerate(data_dict['xs']):
-                y = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
-                lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
-                plt.plot(x, y, label=lab)
-        plt.xlabel(data_dict['xlab'])
-        plt.ylabel(data_dict['ylab'])
-        plt.legend()
-        plt.savefig(f'{self.imdir}{data_dict["savename"]}_allnucs.png')
-        plt.close()
         return

@@ -1,5 +1,6 @@
 import solvers
 import numpy as np
+from data import DataHandler
 
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
@@ -53,7 +54,7 @@ class AnalysisCollection:
             scaling_factor = 1/time
             return scaling_factor, xlab
         
-    def _method_change(self, methods, method_name, x_vals, xfactor=1):
+    def _method_change(self, methods, method_name, xfactor=1):
         """
         Used to handle concentration plotting comparisons with a single
             method change.
@@ -64,8 +65,6 @@ class AnalysisCollection:
             List of methods to apply
         method_name : str
             Key for dictionary to apply method to `run_params`
-        x_vals : :class:`np.ndarray`
-            x-axis values
         xfactor : float
             Value to scale `x_vals` by
 
@@ -83,6 +82,9 @@ class AnalysisCollection:
         xs, ys, labs = [], [], []
         for method in methods:
             self.run_params[method_name] = method
+            self.data_params = DataHandler(self.run_params).data_params
+            solver = solvers.DiffEqSolvers(self.run_params, self.data_params, run=False)
+            x_vals = solver.run_params['times']
             xs.append(xfactor * x_vals)
             result_matrix = solvers.DiffEqSolvers(self.run_params, self.data_params).result_mat
             ys.append(result_matrix)
@@ -97,10 +99,18 @@ class AnalysisCollection:
         self.data['xlab'] = xlab
         self.data['ylab'] = ylab
         self.data['savename'] = savename
-        for nuclide_i in range(self.run_params['num_nuclides']):
-            nuclide = self.data_params['tracked_nucs'][nuclide_i]
+        num_nucs = []
+        for i, x in enumerate(self.data['xs']):
+            num_nucs.append(np.shape(self.data['ys'][i])[2])
+        
+        num_nucs = max(num_nucs)
+        for nuclide_i in range(num_nucs):
             for i, x in enumerate(self.data['xs']):
-                y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                nuclide = self.data_params['tracked_nucs'][nuclide_i]
+                try:
+                    y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                except IndexError:
+                    continue
                 lab = f'{self.data["labs"][i]} {nuclide}'
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
@@ -122,10 +132,66 @@ class AnalysisCollection:
         savename = 'PDE_ODE_comparison'
         time_factor, xlab = self._time_lab()
         xs, ys, labs = self._method_change(methods, 'solver_method',
-                                           self.run_params['times'],
                                            time_factor)
         self._save_data(xs, ys, labs, xlab, ylab, savename)
 
         self.run_params['solver_methods'] = current_solver
+        data = self.data
+        return data
+    
+
+    def nuclide_refinement(self, max_nuc=5):
+        """
+        Run with current parameters for varying number of nuclides.
+
+        Parameters
+        ----------
+        max_nuc : int
+            Maximum number of nuclides
+
+        Returns
+        -------
+        data : dict
+            key : str
+                Name of variable
+        """
+        current_nuclides = self.run_params['num_nuclides']
+        methods = np.linspace(1, max_nuc, max_nuc).astype(int)
+        ylab = 'Concentration [atoms/cc]'
+        savename = 'nuclide_refinement'
+        time_factor, xlab = self._time_lab()
+        xs, ys, labs = self._method_change(methods, 'num_nuclides',
+                                           time_factor)
+        self._save_data(xs, ys, labs, xlab, ylab, savename)
+
+        self.run_params['num_nuclides'] = current_nuclides
+        data = self.data
+        return data
+
+    def spatial_refinement(self, spat_node_list=[10, 100, 1000, 10000]):
+        """
+        Run with current parameters for varying number of spatial nodes.
+
+        Parameters
+        ----------
+        max_nuc : int
+            Maximum number of nuclides
+
+        Returns
+        -------
+        data : dict
+            key : str
+                Name of variable
+        """
+        current_spacenodes = self.run_params['spacenodes']
+        methods = spat_node_list
+        ylab = 'Concentration [atoms/cc]'
+        savename = 'spatial_refinement'
+        time_factor, xlab = self._time_lab()
+        xs, ys, labs = self._method_change(methods, 'spacenodes',
+                                           time_factor)
+        self._save_data(xs, ys, labs, xlab, ylab, savename)
+
+        self.run_params['spacenodes'] = current_spacenodes
         data = self.data
         return data

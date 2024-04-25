@@ -100,7 +100,7 @@ class DataHandler:
         _, fiss_xs = self._get_tot_xs(cur_target)
         while i < self.num_nucs:
             cur_target = f'{tracked_element}{self.target_isobar}'
-            tracked_nucs[i] = self.cur_target
+            tracked_nucs[i] = cur_target
             lams[i] = openmc.data.decay_constant(cur_target)
             net_xs, _ = self._get_tot_xs(cur_target)
             FYs[i] = self.flux * fiss_xs * yield_fracs[self.energy][cur_target]
