@@ -2,6 +2,7 @@ import solvers
 import data
 import analysis
 import numpy as np
+import plotter
 
 def check_data(run_params, allowed_params):
     """
@@ -29,9 +30,12 @@ def check_data(run_params, allowed_params):
 
 
 if __name__ == '__main__':
+    plotting = True
+    image_directory = './images/'
     analysis_params = {}
-    analysis_params['test_run'] = False
-    analysis_params['PDE_ODE_compare'] = True
+    analysis_params['test_run'] = True
+    analysis_params['PDE_ODE_compare'] = False
+    analysis_params['nuclide_refinement'] = False
 
     run_params = {}
     run_params['openmc_data_path'] = '/root/nndc_hdf5/'
@@ -41,7 +45,7 @@ if __name__ == '__main__':
     run_params['fissile_nuclide'] = 'U235'
     run_params['target_element'] = 'Xe'
     run_params['target_isobar'] = '135'
-    run_params['spacenodes'] = 200
+    run_params['spacenodes'] = 5 #200
     run_params['num_nuclides'] = 1
     run_params['data_gen_option'] = 'openmc'
     run_params['final_time'] = 100
@@ -86,8 +90,13 @@ if __name__ == '__main__':
     data_params = data.DataHandler(run_params).data_params
 
     analyzer = analysis.AnalysisCollection(analysis_params, run_params, data_params)
+    plotter_tool = plotter.PlotterCollection(run_params['num_nuclides'], image_directory)
+
     if analysis_params['test_run']:
         result_matrix = solvers.DiffEqSolvers(run_params, data_params).result_mat
+        print(result_matrix)
     
     if analysis_params['PDE_ODE_compare']:
         data_dict = analyzer.ode_pde_compare()
+        if plotting:
+            plotter_tool.plot_time(data_dict)

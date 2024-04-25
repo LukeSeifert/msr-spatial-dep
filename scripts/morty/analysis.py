@@ -1,5 +1,5 @@
 import solvers
-import os
+import numpy as np
 
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
@@ -97,6 +97,13 @@ class AnalysisCollection:
         self.data['xlab'] = xlab
         self.data['ylab'] = ylab
         self.data['savename'] = savename
+        for nuclide_i in range(self.run_params['num_nuclides']):
+            nuclide = self.data_params['tracked_nucs'][nuclide_i]
+            for i, x in enumerate(self.data['xs']):
+                y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                lab = f'{self.data["labs"][i]} {nuclide}'
+                self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
+                self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
         return
     
     def ode_pde_compare(self):

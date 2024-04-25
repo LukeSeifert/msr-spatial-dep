@@ -131,7 +131,7 @@ class DiffEqSolvers:
         """
         for gain_nuc in range(self.num_nucs):
             fission_source = self.FYs[gain_nuc]/self.incore_volume
-            decay_source = np.asarray(self.concs[gain_nuc] * 0.0)
+            decay_source = np.zeros(len(self.concs[gain_nuc]))
             for loss_nuc in range(self.num_nucs):
                 try:
                     frac = self.dec_fracs[(loss_nuc, gain_nuc)]

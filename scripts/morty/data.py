@@ -40,29 +40,33 @@ class DataHandler:
         return
     
 
-    def _get_tot_xs(self):
+    def _get_tot_xs(self, cur_target):
         import openmc.data
         has_data = True
         fiss_xs = 0
+        fission_MT = 18
         try:
-            hdf5_data = openmc.data.IncidentNeutron.from_hdf5(f'{self.openmc_data_path}{self.cur_target}.h5')
+            hdf5_data_fissile = openmc.data.IncidentNeutron.from_hdf5(f'{self.openmc_data_path}{self.fissile_nuclide}.h5')
+            hdf5_data_target = openmc.data.IncidentNeutron.from_hdf5(f'{self.openmc_data_path}{cur_target}.h5')
         except FileNotFoundError:
-            print(f'{self.cur_target} does not have XS data')
+            print(f'{cur_target} does not have XS data')
             has_data = False
         net_xs = 0
         if has_data:
             try:
-                fiss_xs_f = hdf5_data.reactions[18]._xs[self.temp]
+                fiss_xs_f = hdf5_data_fissile.reactions[fission_MT]._xs[self.temp]
                 fiss_xs = fiss_xs_f(self.energy)
             except KeyError:
+                print(f'No fission cross section')
                 pass
             for MT in self.endf_mt_total:
                 try:
-                    f = hdf5_data.reactions[MT]._xs[self.temp]
+                    f = hdf5_data_target.reactions[MT]._xs[self.temp]
                     net_xs += f(self.energy)
                 except KeyError:
                     continue
         net_xs = net_xs * 1e-24
+        fiss_xs = fiss_xs * 1e-24
         return net_xs, fiss_xs
 
 
@@ -93,12 +97,12 @@ class DataHandler:
         i = 0
         feeds = i - 1
         skip_feed = []
-        _, fiss_xs = self._get_tot_xs()
+        _, fiss_xs = self._get_tot_xs(cur_target)
         while i < self.num_nucs:
             cur_target = f'{tracked_element}{self.target_isobar}'
-            tracked_nucs[i] = cur_target
+            tracked_nucs[i] = self.cur_target
             lams[i] = openmc.data.decay_constant(cur_target)
-            net_xs, _ = self._get_tot_xs()
+            net_xs, _ = self._get_tot_xs(cur_target)
             FYs[i] = self.flux * fiss_xs * yield_fracs[self.energy][cur_target]
             loss_rates[i] = net_xs * self.flux
 
@@ -120,7 +124,7 @@ class DataHandler:
                     if i >= self.num_nucs:
                         break
                     tracked_nucs[i] = target
-                    net_xs, _ = self._get_tot_xs()
+                    net_xs, _ = self._get_tot_xs(cur_target)
                     loss_rates[i] = net_xs * self.flux
                     lams[i] = openmc.data.decay_constant(target)
                     FYs[i] = self.flux * fiss_xs * yield_fracs[self.energy][target]
@@ -170,8 +174,7 @@ class DataHandler:
         Yc = 0.0292737
         Yd_m1 = 0.0110156
         Yd = 0.000785125
-        input('fission XS not properly hardcoded yet')
-        fiss_xs = 1e-10
+        fiss_xs = 584.8972e-24
         fiss_rate = self.flux * fiss_xs
         yield_data = [Yd,
                       Yc,
@@ -202,7 +205,7 @@ class DataHandler:
             tracked_nucs[i] = nuc_names[i]
             lams[i] = np.log(2) / half_life_data[i]
             FYs[i] = fiss_rate * yield_data[i]
-            loss_rates[i] = net_xs_data * self.flux
+            loss_rates[i] = net_xs_data[i] * self.flux
             for pathi, path in enumerate(decay_chain_path_data):
                 if i == path[0]:
                     decay_frac[path] = decay_fracs_data[pathi]
