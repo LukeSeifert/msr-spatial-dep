@@ -16,7 +16,12 @@ class DataHandler:
         self.target_element = run_params['target_element']
         self.target_isobar = run_params['target_isobar']
         self.num_nucs = run_params['num_nuclides']
-        self.flux = run_params['flux']
+        scaling_factor = 1
+        if run_params['scaled_flux'] and run_params['solver_method'] == 'ODE':
+            scaling_factor = run_params['frac_in']
+            print(f'Scaling flux by {scaling_factor}')
+        self.flux = run_params['flux'] * scaling_factor
+        self.power_W = run_params['power_W'] * scaling_factor
         self.nuclide_target = self.target_element + self.target_isobar
         data_gen_option = run_params['data_gen_option']
         self.run_params = run_params
@@ -57,7 +62,8 @@ class DataHandler:
             try:
                 fiss_xs_f = hdf5_data_fissile.reactions[fission_MT]._xs[self.temp]
                 fiss_xs = fiss_xs_f(self.energy) * 1e-24
-                self.run_params['fissile_atoms'] = self.run_params['power_W'] / (self.run_params['J_per_fiss'] * self.run_params['flux'] * fiss_xs)
+                self.run_params['fissile_atoms'] = self.power_W / (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
+                self.run_params['fissile_atom_dens_cc'] = self.run_params['fissile_atoms'] / self.run_params['net_cc_vol']
             except KeyError:
                 print(f'No fission cross section')
                 pass
@@ -67,9 +73,9 @@ class DataHandler:
                     net_xs += f(self.energy)
                 except KeyError:
                     continue
-        net_xs = net_xs * 1e-24
-        fiss_xs = fiss_xs * self.run_params['fissile_atoms']
-        return net_xs, fiss_xs
+        micro_net_xs = net_xs * 1e-24
+        macro_fiss_xs = fiss_xs * self.run_params['fissile_atom_dens_cc']
+        return micro_net_xs, macro_fiss_xs
 
 
     def openmc_data_gen(self):
@@ -149,7 +155,7 @@ class DataHandler:
         data_params['loss_rates'] = loss_rates
         return data_params
     
-    def hardcoded_data_gen(self):
+    def hardcoded_data_gen(self, debug=False):
         """
         Hardocded data that does not require OpenMC
         """
@@ -159,54 +165,64 @@ class DataHandler:
         decay_frac = {}
         tracked_nucs = {}
         tracked_element = self.target_element
-        if self.nuclide_target != 'Xe135' or self.num_nucs > 5:
-            raise NotImplementedError('Only Xe135 isobar data is hardcoded in up to 5 nuclides')
-        nuc_names = ['Xe135',
-                     'I315',
-                     'Xe135m',
-                     'Te135',
-                     'Sb135']
-        half_life_data = [(15.29*3600),
-                      (6.57*3600),
-                      (9.14*3600),
-                      19,
-                      1.68]
-        Ya = 0.00145764
-        Yb = 0.0321618
-        Yc = 0.0292737
-        Yd_m1 = 0.0110156
-        Yd = 0.000785125
-        fiss_xs = 584.8972e-24
-        fiss_rate = self.flux * fiss_xs
-        yield_data = [Yd,
-                      Yc,
-                      Yd_m1,
-                      Yb,
-                      Ya]
-        ng_I135 = 80.53724E-24
-        ng_Xe135 = 2_666_886.8E-24
-        net_xs_data = [ng_Xe135,
-                      ng_I135,
-                      0,
-                      0,
-                      0]
-        decay_chain_path_data = [(0, -1),
-                                 (1, 0),
-                                 (1, 2),
-                                 (2, 0),
-                                 (3, 1),
-                                 (4, 3)]
-        decay_fracs_data = [1,
-                            0.8349109,
-                            0.1650891,
-                            1,
-                            1,
-                            1]
+        if self.nuclide_target == 'Xe135' and self.num_nucs <= 5:
+            nuc_names = ['Xe135',
+                        'I315',
+                        'Xe135m',
+                        'Te135',
+                        'Sb135']
+            half_life_data = [(15.29*3600),
+                        (6.57*3600),
+                        (9.14*3600),
+                        19,
+                        1.68]
+            Ya = 0.00145764
+            Yb = 0.0321618
+            Yc = 0.0292737
+            Yd_m1 = 0.0110156
+            Yd = 0.000785125
+            fiss_xs = 584.8972e-24
+            self.run_params['fissile_atoms'] = self.power_W / (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
+            self.run_params['fissile_atom_dens_cc'] = self.run_params['fissile_atoms'] / self.run_params['net_cc_vol']
+            fiss_macro_xs = fiss_xs * self.run_params['fissile_atom_dens_cc']
+            yield_data = [Yd,
+                        Yc,
+                        Yd_m1,
+                        Yb,
+                        Ya]
+            ng_I135 = 80.53724E-24
+            ng_Xe135 = 2_666_886.8E-24
+            net_xs_data = [ng_Xe135,
+                        ng_I135,
+                        0,
+                        0,
+                        0]
+            decay_chain_path_data = [(0, -1),
+                                    (1, 0),
+                                    (1, 2),
+                                    (2, 0),
+                                    (3, 1),
+                                    (4, 3)]
+            decay_fracs_data = [1,
+                                0.8349109,
+                                0.1650891,
+                                1,
+                                1,
+                                1]
+        else:
+            raise NotImplementedError(f'Hardcoded {self.nuclide_target} not available with {self.num_nucs} nuclides')
         
+
         for i in range(self.num_nucs):
+            if debug:
+                print('MODIFIED HARDCODED DATA FOR TESTING')
+                tracked_nucs[i] = nuc_names[i]
+                lams[i] = 1e-20
+                FYs[i] = 1 #a/cc-s
+                loss_rates[i] = 0
             tracked_nucs[i] = nuc_names[i]
             lams[i] = np.log(2) / half_life_data[i]
-            FYs[i] = fiss_rate * yield_data[i]
+            FYs[i] = fiss_macro_xs * yield_data[i] * self.flux
             loss_rates[i] = net_xs_data[i] * self.flux
             for pathi, path in enumerate(decay_chain_path_data):
                 if i == path[0]:

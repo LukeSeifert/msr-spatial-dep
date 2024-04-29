@@ -25,8 +25,8 @@ class DiffEqSolvers:
         self.num_nucs = run_params['num_nuclides']
         self.final_time = run_params['final_time']
         run_params['frac_out'] = 1 - run_params['frac_in']
-        run_params['core_outlet']   = (run_params['net_length'] * run_params['frac_out'])
-        run_params['excore_outlet'] = run_params['core_outlet'] + (run_params['net_length'] * run_params['frac_in'])
+        run_params['core_outlet'] = (run_params['net_length'] * run_params['frac_in'])
+        run_params['excore_outlet'] = run_params['net_length']
         self.z_excore_outlet = run_params['excore_outlet']
         self.z_core_outlet = run_params['core_outlet']
         self.CFL_cond = run_params['CFL_cond']
@@ -114,7 +114,6 @@ class DiffEqSolvers:
                 return_list[zi] = incore_term
             elif z > self.z_core_outlet:
                 return_list[zi] = excore_term
-
         return np.asarray(return_list)
 
     def _initialize_concs(self):
@@ -149,7 +148,7 @@ class DiffEqSolvers:
 
         """
         for gain_nuc in range(self.num_nucs):
-            fission_source = self.FYs[gain_nuc]/self.incore_volume
+            fission_source = self.FYs[gain_nuc] # fiss/cc-s
             decay_source = np.zeros(len(self.concs[gain_nuc]))
             for loss_nuc in range(self.num_nucs):
                 try:
@@ -228,8 +227,8 @@ class DiffEqSolvers:
 
         conc_mult = 1 - mu_vec * self.dt
         add_source = S_vec * self.dt
-        lmbda = (self.flow_vec * self.dt / dz)
-        conc = add_source + conc_mult * conc + self.CFL_cond * (conc[Jm1] - conc)
+        CFL_vec = (self.flow_vec * self.dt / dz)
+        conc = add_source + conc_mult * conc + CFL_vec * (conc[Jm1] - conc)
 
         return conc
 

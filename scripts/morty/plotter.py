@@ -36,7 +36,7 @@ class PlotterCollection:
             os.mkdir(self.imdir)
         return
     
-    def plot_time(self, data_dict, spatial_eval_node=None):
+    def plot_time(self, data_dict, spatial_eval_node=None, y_scale='log'):
         """
         Plots average data over time where `data_dict` contains all
          necessary information
@@ -71,7 +71,11 @@ class PlotterCollection:
                 plt.plot(x, y, label=lab)
             plt.xlabel(data_dict['xlab'])
             plt.ylabel(data_dict['ylab'])
+            plt.yscale(y_scale)
             plt.legend()
-            plt.savefig(f'{self.imdir}{data_dict["savename"]}_{nuclide_i}_{ending}.png')
+            try:
+                plt.savefig(f'{self.imdir}{data_dict["savename"]}_{nuclide_i}_{ending}.png')
+            except UnboundLocalError:
+                print(f'No data for {nuclide_i} figure at spatial index {spatial_eval_node}')
             plt.close()
         return

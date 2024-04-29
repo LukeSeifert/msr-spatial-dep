@@ -31,6 +31,7 @@ def check_data(run_params, allowed_params):
 
 if __name__ == '__main__':
     plotting = True
+    plotting_yscale = 'linear'
     image_directory = './images/'
     analysis_params = {}
     analysis_params['test_run'] = False
@@ -39,6 +40,7 @@ if __name__ == '__main__':
     analysis_params['spatial_refinement'] = False
 
     run_params = {}
+    run_params['scaled_flux'] = False
     run_params['openmc_data_path'] = '/root/nndc_hdf5/'
     run_params['temperature'] = '294K'
     run_params['neutron_energy'] = 0.0253
@@ -47,9 +49,9 @@ if __name__ == '__main__':
     run_params['target_element'] = 'Xe'
     run_params['target_isobar'] = '135'
     run_params['spacenodes'] = 200
-    run_params['num_nuclides'] = 2
+    run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'openmc'
-    run_params['final_time'] = 3600
+    run_params['final_time'] = 1.25 * 24 * 3600
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 6e12
     run_params['net_length'] = 608.06
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     available_temperatures = ['294K']
     available_energies = [0.0253, 500_000, 14_000_000]
     available_data = ['openmc', 'hardcoded']
-    available_methods = ['PDE', 'ODE']
+    available_methods = ['ODE', 'PDE']
 
     allowed_params['temperature'] = available_temperatures
     allowed_params['neutron_energy'] = available_energies
@@ -93,19 +95,19 @@ if __name__ == '__main__':
         print('-'*50)
         data_dict = analyzer.ode_pde_compare()
         if plotting:
-            plotter_tool.plot_time(data_dict)
+            plotter_tool.plot_time(data_dict, y_scale=plotting_yscale)
             core_outlet_node = int(run_params['spacenodes'] * run_params['frac_in'])
-            plotter_tool.plot_time(data_dict, core_outlet_node)
+            plotter_tool.plot_time(data_dict, core_outlet_node, y_scale=plotting_yscale)
     
     if analysis_params['nuclide_refinement']:
         print('-'*50)
-        data_dict = analyzer.nuclide_refinement(max_nuc=5)
+        data_dict = analyzer.nuclide_refinement(max_nuc=6)
         if plotting:
-            plotter_tool.plot_time(data_dict)
+            plotter_tool.plot_time(data_dict, y_scale=plotting_yscale)
 
     if analysis_params['spatial_refinement']:
         print('-'*50)
         spatial_nodes = [2, 5, 10, 100, 200, 500]
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         if plotting:
-            plotter_tool.plot_time(data_dict)
+            plotter_tool.plot_time(data_dict, y_scale=plotting_yscale)

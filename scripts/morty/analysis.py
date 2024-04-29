@@ -54,7 +54,7 @@ class AnalysisCollection:
             scaling_factor = 1/time
             return scaling_factor, xlab
         
-    def _method_change(self, methods, method_name, xfactor=1):
+    def _method_change(self, methods, method_name, xfactor=1, methodname_extension=''):
         """
         Used to handle concentration plotting comparisons with a single
             method change.
@@ -88,7 +88,7 @@ class AnalysisCollection:
             xs.append(xfactor * x_vals)
             result_matrix = solvers.DiffEqSolvers(self.run_params, self.data_params).result_mat
             ys.append(result_matrix)
-            labs.append(method)
+            labs.append(f'{method}{methodname_extension}')
         return xs, ys, labs
 
     def _save_data(self, xs, ys, labs, xlab, ylab, savename):
@@ -106,6 +106,7 @@ class AnalysisCollection:
         num_nucs = max(num_nucs)
         for nuclide_i in range(num_nucs):
             final_data_points = []
+            final_names = []
             for i, x in enumerate(self.data['xs']):
                 nuclide = self.data_params['tracked_nucs'][nuclide_i]
                 try:
@@ -116,10 +117,11 @@ class AnalysisCollection:
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
+                final_names.append(lab)
         
-            for data in final_data_points:
+            for data_i, data in enumerate(final_data_points):
                 pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
-                print(f'Percent Diff of {lab} from most accurate: {pcnt_diff}%')
+                print(f'Percent Diff of {final_names[data_i]} from most accurate: {pcnt_diff}%')
         return
     
     def ode_pde_compare(self):
@@ -133,7 +135,7 @@ class AnalysisCollection:
                 Name of variable            
         """
         current_solver = self.run_params['solver_method']
-        methods = ['PDE', 'ODE']
+        methods = ['ODE', 'PDE']
         ylab = 'Concentration [atoms/cc]'
         savename = 'PDE_ODE_comparison'
         time_factor, xlab = self._time_lab()
@@ -167,7 +169,8 @@ class AnalysisCollection:
         savename = 'nuclide_refinement'
         time_factor, xlab = self._time_lab()
         xs, ys, labs = self._method_change(methods, 'num_nuclides',
-                                           time_factor)
+                                           time_factor,
+                                           methodname_extension=' nuclides')
         self._save_data(xs, ys, labs, xlab, ylab, savename)
 
         self.run_params['num_nuclides'] = current_nuclides
@@ -195,7 +198,8 @@ class AnalysisCollection:
         savename = 'spatial_refinement'
         time_factor, xlab = self._time_lab()
         xs, ys, labs = self._method_change(methods, 'spacenodes',
-                                           time_factor)
+                                           time_factor,
+                                           methodname_extension=' nodes')
         self._save_data(xs, ys, labs, xlab, ylab, savename)
 
         self.run_params['spacenodes'] = current_spacenodes
