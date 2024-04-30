@@ -37,6 +37,35 @@ class PlotterCollection:
             os.mkdir(self.imdir)
         return
     
+    def parasitic_plot(self, parasitic_matrix, run_params, data_params):
+        """
+        Plots the parasitic absorption density
+
+        Parameters
+        ----------
+        parasitic_abs_val : :class:`np.ndarray`
+            Parasitic absorption for nuclides over time in
+            atoms per cc
+        
+        """
+        print(np.shape(parasitic_matrix) == ())
+        input(f'{parasitic_matrix.keys()=}')
+
+        if np.shape(parasitic_matrix) == ():
+            input(f'{parasitic_matrix.keys()=}')
+            pass
+        else:
+            for nuclide_index in range(np.shape(parasitic_matrix)[0]):
+                x = run_params['times']
+                y = parasitic_matrix[nuclide_index]
+                lab = data_params['tracked_nucs'][nuclide_index]
+                plt.plot(x, y, label=lab)
+        plt.xlabel('Time [s]')
+        plt.ylabel('Concentration [atoms/cc]')
+        plt.savefig(f'{self.imdir}parasitic_absorption.png')
+        plt.close()
+        return
+    
     def plot_time(self, data_dict, spatial_eval_node=None, y_scale='log'):
         """
         Plots average data over time where `data_dict` contains all

@@ -256,7 +256,7 @@ class DiffEqSolvers:
         
         Returns
         -------
-        result_mat : 3D matrix
+        result_mat : :class:`np.ndarray`
             Holds values over time, space, and nuclide (in that order)
         
         """
