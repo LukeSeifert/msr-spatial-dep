@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import os.path
 import os
 import numpy as np
+from time import time
 
 class PlotterCollection:
     def __init__(self, imdir='./images/'):
@@ -79,3 +80,57 @@ class PlotterCollection:
                 print(f'No data for {nuclide_i} figure at spatial index {spatial_eval_node}')
             plt.close()
         return
+
+    def gif_generate(self, data_dict, run_params):
+        """
+        Plots spatial conc over time where `data_dict` contains all
+         necessary information
+
+        Parameters
+        ----------
+        data_dict : dict
+            key : str
+                Variable name
+        run_params : dict
+            key : str
+                Variable name
+        """
+        start_time = time()
+        from matplotlib.animation import FuncAnimation
+        plt.rcParams['savefig.dpi'] = 100
+        fig, ax = plt.subplots()
+        num_nucs = []
+        for i, x in enumerate(data_dict['xs']):
+            num_nucs.append(np.shape(data_dict['ys'][i])[2])
+        num_nucs = max(num_nucs)
+        max_conc = np.max(data_dict['ys'])
+
+        def update(frame):
+            ax.clear()
+            plt.xlabel('Space [cm]')
+            plt.vlines(run_params['core_outlet'], 0, 1e1 * max_conc, color='black')
+            plt.ylabel('Concentration [at/cc]')
+            plt.ylim((1e-5 * max_conc, 1e1 * max_conc))
+            plt.yscale('log')
+
+            for nuclide_i in range(num_nucs):
+                for i, x in enumerate(data_dict['xs']):
+                    try:
+                        y = data_dict['ys'][i][frame, :, nuclide_i]
+                    except KeyError:
+                        continue
+                    lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
+
+                    ax.plot(run_params['positions'], y, label=lab, marker='.')
+                    ax.set_title(f'Time: {round(frame*run_params["dt"], 4)} s')
+                    plt.legend()
+            
+
+        animation = FuncAnimation(fig, update, frames=len(run_params['times']), interval=1)
+        animation.save(f'{self.imdir}isobar_evolution.gif', writer='pillow')
+        plt.close()
+        plt.rcParams['savefig.dpi'] = 300
+        print(f'Gif creation took: {round(time() - start_time, 3)} s')
+        return
+
+

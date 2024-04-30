@@ -30,8 +30,9 @@ def check_data(run_params, allowed_params):
 
 
 if __name__ == '__main__':
-    plotting = True
-    plotting_yscale = 'linear'
+    plotting = False
+    plotting_yscale = 'log'
+    gif = True
     image_directory = './images/'
     analysis_params = {}
     analysis_params['test_run'] = False
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     analysis_params['spatial_refinement'] = False
 
     run_params = {}
-    run_params['scaled_flux'] = False
+    run_params['scaled_flux'] = True
     run_params['openmc_data_path'] = '/root/nndc_hdf5/'
     run_params['temperature'] = '294K'
     run_params['neutron_energy'] = 0.0253
@@ -98,6 +99,8 @@ if __name__ == '__main__':
             plotter_tool.plot_time(data_dict, y_scale=plotting_yscale)
             core_outlet_node = int(run_params['spacenodes'] * run_params['frac_in'])
             plotter_tool.plot_time(data_dict, core_outlet_node, y_scale=plotting_yscale)
+        if gif:
+            plotter_tool.gif_generate(data_dict, run_params)
     
     if analysis_params['nuclide_refinement']:
         print('-'*50)

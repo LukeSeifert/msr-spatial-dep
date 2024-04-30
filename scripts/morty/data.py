@@ -19,7 +19,6 @@ class DataHandler:
         scaling_factor = 1
         if run_params['scaled_flux'] and run_params['solver_method'] == 'ODE':
             scaling_factor = run_params['frac_in']
-            print(f'Scaling flux by {scaling_factor}')
         self.flux = run_params['flux'] * scaling_factor
         self.power_W = run_params['power_W'] * scaling_factor
         self.nuclide_target = self.target_element + self.target_isobar
