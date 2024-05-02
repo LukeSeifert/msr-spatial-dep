@@ -1,6 +1,7 @@
 import numpy as np
 from time import time
 
+
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
         """
@@ -27,21 +28,39 @@ class DiffEqSolvers:
         self.num_nucs = run_params['num_nuclides']
         self.final_time = run_params['final_time']
         run_params['frac_out'] = 1 - run_params['frac_in']
-        run_params['core_outlet'] = (run_params['net_length'] * run_params['frac_in'])
+        run_params['core_outlet'] = (
+            run_params['net_length'] *
+            run_params['frac_in'])
         run_params['excore_outlet'] = run_params['net_length']
         self.z_excore_outlet = run_params['excore_outlet']
         self.z_core_outlet = run_params['core_outlet']
         self.CFL_cond = run_params['CFL_cond']
-        
-        run_params['incore_volume'] = run_params['net_cc_vol'] * run_params['frac_in']
-        linear_flow_rate = (run_params['vol_flow_rate'] / (run_params['fuel_fraction'] * np.pi * (run_params['core_rad'])**2))
+
+        run_params['incore_volume'] = run_params['net_cc_vol'] * \
+            run_params['frac_in']
+        linear_flow_rate = (run_params['vol_flow_rate'] /
+                            (run_params['fuel_fraction'] *
+                             np.pi *
+                             (run_params['core_rad'])**2))
         run_params['incore_flowrate'] = linear_flow_rate
         run_params['excore_flowrate'] = linear_flow_rate
-        run_params['max_flowrate'] = max(run_params['incore_flowrate'], run_params['excore_flowrate'])
-        run_params['dz'] = np.diff(np.linspace(0, run_params['excore_outlet'], run_params['spacenodes']))[0]
-        run_params['positions'] = np.linspace(0, run_params['excore_outlet'], run_params['spacenodes'])
-        run_params['dt'] = run_params['CFL_cond'] * run_params['dz'] / run_params['max_flowrate']
-        run_params['times'] = np.arange(0, run_params['final_time']+run_params['dt'], run_params['dt'])
+        run_params['max_flowrate'] = max(
+            run_params['incore_flowrate'],
+            run_params['excore_flowrate'])
+        run_params['dz'] = np.diff(
+            np.linspace(
+                0,
+                run_params['excore_outlet'],
+                run_params['spacenodes']))[0]
+        run_params['positions'] = np.linspace(
+            0, run_params['excore_outlet'], run_params['spacenodes'])
+        run_params['dt'] = run_params['CFL_cond'] * \
+            run_params['dz'] / run_params['max_flowrate']
+        run_params['times'] = np.arange(
+            0,
+            run_params['final_time'] +
+            run_params['dt'],
+            run_params['dt'])
 
         self.incore_flowrate = run_params['incore_flowrate']
         self.excore_flowrate = run_params['excore_flowrate']
@@ -52,7 +71,7 @@ class DiffEqSolvers:
         self.times = run_params['times']
 
         self.flow_vec = self._format_spatial(self.incore_flowrate,
-                                           self.excore_flowrate)
+                                             self.excore_flowrate)
 
         self.lams = data_params['lams']
         self.loss_rates = data_params['loss_rates']
@@ -77,9 +96,9 @@ class DiffEqSolvers:
                 self.res_mat = self.ode_solve()
             took = time() - start
             print(f'Took {round(took, 3)} seconds')
-        
+
         return
-    
+
     def _format_spatial(self, term1, term2):
         """
         Distribute term 1 in < z_core_outlet and term 2 above outlet.
@@ -127,7 +146,7 @@ class DiffEqSolvers:
         for nuclide in range(self.num_nucs):
             self.concs.append(np.zeros(self.spacenodes))
         return
-    
+
     def _initialize_result_mat(self):
         """
         Set up the 3D result matrix with the form
@@ -139,7 +158,8 @@ class DiffEqSolvers:
             Holds values over time, space, and nuclide (in that order)
 
         """
-        result_mat = np.zeros((len(self.times), self.spacenodes, self.num_nucs))
+        result_mat = np.zeros(
+            (len(self.times), self.spacenodes, self.num_nucs))
         for nuclide in range(self.num_nucs):
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
@@ -150,12 +170,14 @@ class DiffEqSolvers:
 
         """
         for gain_nuc in range(self.num_nucs):
-            fission_source = self.FYs[gain_nuc] # fiss/cc-s
+            fission_source = self.FYs[gain_nuc]  # fiss/cc-s
             decay_source = np.zeros(len(self.concs[gain_nuc]))
             for loss_nuc in range(self.num_nucs):
                 try:
                     frac = self.dec_fracs[(loss_nuc, gain_nuc)]
-                    decay_source += (frac * self.concs[loss_nuc] * self.lams[loss_nuc])
+                    decay_source += (frac *
+                                     self.concs[loss_nuc] *
+                                     self.lams[loss_nuc])
                 except KeyError:
                     continue
             incore_source = fission_source + decay_source
@@ -224,7 +246,7 @@ class DiffEqSolvers:
         S_vec = self.S[nuclide_index]
         mu_vec = self.mu[nuclide_index]
         J = np.arange(0, self.spacenodes)
-        Jm1 = np.roll(J,  1)
+        Jm1 = np.roll(J, 1)
         dz = np.diff(self.positions)[0]
 
         conc_mult = 1 - mu_vec * self.dt
@@ -250,22 +272,23 @@ class DiffEqSolvers:
             self._update_sources()
 
             for nuclide in range(self.num_nucs):
-                self.concs[nuclide] = self._external_ODE_no_step(self.concs[nuclide], nuclide)
+                self.concs[nuclide] = self._external_ODE_no_step(
+                    self.concs[nuclide], nuclide)
 
-            ODE_result_mat = self._update_result_mat(ODE_result_mat, ti+1)
+            ODE_result_mat = self._update_result_mat(ODE_result_mat, ti + 1)
         self.result_mat = ODE_result_mat
         return ODE_result_mat
-    
+
     def PDE_solver(self):
         """
         Runs the PDE solver to generate the time and space dependent
             concentrations for each nuclide.
-        
+
         Returns
         -------
         result_mat : :class:`np.ndarray`
             Holds values over time, space, and nuclide (in that order)
-        
+
         """
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
@@ -274,8 +297,8 @@ class DiffEqSolvers:
             self._update_sources()
 
             for nuclide in range(self.num_nucs):
-                self.concs[nuclide] = self._external_PDE_no_step(self.concs[nuclide], nuclide)
-            result_mat = self._update_result_mat(result_mat, ti+1)
+                self.concs[nuclide] = self._external_PDE_no_step(
+                    self.concs[nuclide], nuclide)
+            result_mat = self._update_result_mat(result_mat, ti + 1)
         self.result_mat = result_mat
         return result_mat
-    

@@ -4,6 +4,7 @@ import os
 import numpy as np
 from time import time
 
+
 class PlotterCollection:
     def __init__(self, plotting_params, run_params, data_params):
         """
@@ -47,7 +48,7 @@ class PlotterCollection:
         if not os.path.isdir(self.imdir):
             os.mkdir(self.imdir)
         return
-    
+
     def parasitic_plot(self, parasitic_data):
         """
         Plots the parasitic absorption density
@@ -57,7 +58,7 @@ class PlotterCollection:
         parasitic_data : dict
             key : str
                 Name of variable
-        
+
         """
         parasitic_use_data = parasitic_data['parasitic']
         for nuclide_index in range(np.shape(parasitic_use_data)[1]):
@@ -72,10 +73,11 @@ class PlotterCollection:
             plt.ylabel('Concentration [atoms/cc]')
             plt.legend()
             plt.tight_layout()
-            plt.savefig(f'{self.imdir}parasitic_absorption_{nuclide_index}.png')
+            plt.savefig(
+                f'{self.imdir}parasitic_absorption_{nuclide_index}.png')
             plt.close()
         return
-    
+
     def plot_time(self, data_dict, spatial_eval_node=None):
         """
         Plots average data over time where `data_dict` contains all
@@ -87,7 +89,7 @@ class PlotterCollection:
             key : str
                 Variable name
         spatial_eval_node : int (optional)
-            Spatial node index to evaluate    
+            Spatial node index to evaluate
         """
         num_nucs = []
         for i, x in enumerate(data_dict['xs']):
@@ -95,7 +97,9 @@ class PlotterCollection:
         num_nucs = max(num_nucs)
         for nuclide_i in range(num_nucs):
             for i, x in enumerate(data_dict['xs']):
-                if type(spatial_eval_node) == type(None):
+
+
+if isinstance(spatial_eval_node, type(None)):
                     try:
                         y = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
                     except KeyError:
@@ -160,7 +164,6 @@ class PlotterCollection:
                     ax.plot(self.run_params['positions'], y, label=lab, marker='.')
                     ax.set_title(f'Time: {round(frame*self.run_params["dt"], 4)} s')
                     plt.legend()
-            
 
         animation = FuncAnimation(fig, update, frames=len(self.run_params['times']), interval=1)
         animation.save(f'{self.imdir}isobar_evolution.gif', writer='pillow')
@@ -168,7 +171,7 @@ class PlotterCollection:
         plt.rcParams['savefig.dpi'] = 300
         print(f'Gif creation took: {round(time() - start_time, 3)} s')
         return
-    
+
     def plot_gen(self, data_dict, spatial_eval_positions=[]):
         """
         Generates various plots based on plotting parameters
@@ -180,18 +183,16 @@ class PlotterCollection:
                 Name of variable
         spatial_eval_positions : list of int (optional)
             Spatial index positions to evaluate over time
-        
+
         """
         if not self.plotting_params['plotting']:
             return
         self.plot_time(data_dict)
         for pos in spatial_eval_positions:
-            self.plot_time(data_dict, pos) 
+            self.plot_time(data_dict, pos)
         if self.plotting_params['gif']:
             self.gif_generate(data_dict)
         if self.plotting_params['parasitic_absorption']:
             self.parasitic_plot(data_dict)
-        
+
         return
-
-

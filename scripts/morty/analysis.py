@@ -3,6 +3,7 @@ import numpy as np
 from data import DataHandler
 from scipy import integrate
 
+
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
         """
@@ -26,7 +27,7 @@ class AnalysisCollection:
         self.run_params = run_params
         self.data_params = data_params
         return
-    
+
     def _time_lab(self):
         """
         Determines time scaling to use and labelling
@@ -38,7 +39,7 @@ class AnalysisCollection:
         xlab : str
             Time label to use
         """
-        tf = self.run_params['final_time'] 
+        tf = self.run_params['final_time']
         second = 1
         millisecond = 1e-3 * second
         minute = 60 * second
@@ -51,10 +52,15 @@ class AnalysisCollection:
             if time > tf:
                 continue
             xlab = f'Time [{label_list[ti]}]'
-            scaling_factor = 1/time
+            scaling_factor = 1 / time
             return scaling_factor, xlab
-        
-    def _method_change(self, methods, method_name, xfactor=1, methodname_extension=''):
+
+    def _method_change(
+            self,
+            methods,
+            method_name,
+            xfactor=1,
+            methodname_extension=''):
         """
         Used to handle concentration plotting comparisons with a single
             method change.
@@ -79,17 +85,19 @@ class AnalysisCollection:
         labs : list of list
             Contains the ordered labels to use in plotting
 
-        
+
         """
         xs, ys, labs = [], [], []
         self.parasitic_results = []
         for method in methods:
             self.run_params[method_name] = method
             self.data_params = DataHandler(self.run_params).data_params
-            solver = solvers.DiffEqSolvers(self.run_params, self.data_params, run=False)
+            solver = solvers.DiffEqSolvers(
+                self.run_params, self.data_params, run=False)
             x_vals = solver.run_params['times']
             xs.append(xfactor * x_vals)
-            result_matrix = solvers.DiffEqSolvers(self.run_params, self.data_params).result_mat
+            result_matrix = solvers.DiffEqSolvers(
+                self.run_params, self.data_params).result_mat
             ys.append(result_matrix)
             labs.append(f'{method}{methodname_extension}')
             self.parasitic_results.append(self._parasitic_abs(result_matrix))
@@ -114,7 +122,7 @@ class AnalysisCollection:
         savename : str
             Name of file to save as
 
-        
+
         """
         self.data = {}
         self.data['xs'] = xs
@@ -127,7 +135,7 @@ class AnalysisCollection:
         num_nucs = []
         for i, x in enumerate(self.data['xs']):
             num_nucs.append(np.shape(self.data['ys'][i])[2])
-        
+
         num_nucs = max(num_nucs)
         for nuclide_i in range(num_nucs):
             final_data_points = []
@@ -143,12 +151,13 @@ class AnalysisCollection:
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
                 final_names.append(lab)
-        
+
             for data_i, data in enumerate(final_data_points):
-                pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
-                print(f'Percent Diff of {final_names[data_i]} from most accurate: {pcnt_diff}%')
+                pcnt_diff = (
+                    data - final_data_points[-1]) / (final_data_points[-1]) * 100
+                print(
+                    f'Percent Diff of {final_names[data_i]} from most accurate: {pcnt_diff}%')
         return
-    
 
     def _parasitic_abs(self, result_mat):
         """
@@ -171,13 +180,15 @@ class AnalysisCollection:
             paras_rate = []
             for ti, t in enumerate(self.run_params['times']):
                 spat_avg_conc = np.mean(result_mat[ti, :, nuclide])
-                parasitic = spat_avg_conc * self.data_params['loss_rates'][nuclide]
+                parasitic = spat_avg_conc * \
+                    self.data_params['loss_rates'][nuclide]
                 paras_rate.append(parasitic)
-            integral_form = integrate.cumtrapz(paras_rate, self.run_params['times'])
+            integral_form = integrate.cumtrapz(
+                paras_rate, self.run_params['times'])
             integral_form = np.insert(integral_form, 0, 0.0)
             parasitic_abs_val.append(integral_form)
         return parasitic_abs_val
-    
+
     def ode_pde_compare(self):
         """
         Run with current parameters for both ODE and PDE solver methods.
@@ -200,7 +211,6 @@ class AnalysisCollection:
         self.run_params['solver_methods'] = current_solver
         data = self.data
         return data
-    
 
     def nuclide_refinement(self, max_nuc=5):
         """
