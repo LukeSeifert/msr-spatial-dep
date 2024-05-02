@@ -14,6 +14,12 @@ class PlotterCollection:
         plotting_params : dict
             key : str
                 Name of variable
+        run_params : dict
+            key : str
+                Name of variable
+        data_params : dict
+            key : str
+                Name of variable
 
         """
         plt.rcParams["font.size"] = 16
@@ -49,8 +55,8 @@ class PlotterCollection:
         Parameters
         ----------
         parasitic_data : dict
-            Parasitic absorption for nuclides over time in
-            atoms per cc
+            key : str
+                Name of variable
         
         """
         parasitic_use_data = parasitic_data['parasitic']
