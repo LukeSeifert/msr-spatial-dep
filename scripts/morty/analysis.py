@@ -29,7 +29,7 @@ class AnalysisCollection:
     
     def _time_lab(self):
         """
-        Determines time scaling to use
+        Determines time scaling to use and labelling
 
         Returns
         -------
@@ -48,7 +48,7 @@ class AnalysisCollection:
         time_list = [year, day, hour, minute, second, millisecond]
         label_list = ['yr', 'd', 'hr', 'min', 's', 'ms']
         for ti, time in enumerate(time_list):
-            if tf < time:
+            if time > tf:
                 continue
             xlab = f'Time [{label_list[ti]}]'
             scaling_factor = 1/time
@@ -67,6 +67,8 @@ class AnalysisCollection:
             Key for dictionary to apply method to `run_params`
         xfactor : float
             Value to scale `x_vals` by
+        methodname_extension : str (optional)
+            String to add to method name in plotting
 
         Returns
         -------
@@ -94,6 +96,26 @@ class AnalysisCollection:
         return xs, ys, labs
 
     def _save_data(self, xs, ys, labs, xlab, ylab, savename):
+        """
+        Saves the collected data into a single dictionary
+
+        Parameters
+        ----------
+        xs : list of list
+            Contains the `x` values to be plotted
+        ys : list of list
+            Contains the `y` values to be plotted
+        labs : list of list
+            Contains the ordered labels to use in plotting
+        xlab : str
+            Name of xlabel
+        ylab : str
+            Name of ylabel
+        savename : str
+            Name of file to save as
+
+        
+        """
         self.data = {}
         self.data['xs'] = xs
         self.data['ys'] = ys
@@ -164,7 +186,7 @@ class AnalysisCollection:
         -------
         data : dict
             key : str
-                Name of variable            
+                Name of variable
         """
         current_solver = self.run_params['solver_method']
         methods = ['ODE', 'PDE']
@@ -215,8 +237,8 @@ class AnalysisCollection:
 
         Parameters
         ----------
-        max_nuc : int
-            Maximum number of nuclides
+        spat_node_list : list of int
+            Number of spatial nodes for each run
 
         Returns
         -------
