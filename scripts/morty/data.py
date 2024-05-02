@@ -115,12 +115,14 @@ class DataHandler:
         net_xs = 0
         if has_data:
             try:
-                fiss_xs_f = hdf5_data_fissile.reactions[fission_MT]._xs[self.temp]
+                reactions = hdf5_data_fissile.reactions[fission_MT]
+                fiss_xs_f = reactions._xs[self.temp]
                 fiss_xs = fiss_xs_f(self.energy) * 1e-24
                 self.run_params['fissile_atoms'] = self.power_W / \
                     (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
-                self.run_params['fissile_atom_dens_cc'] = self.run_params['fissile_atoms'] / \
-                    self.run_params['net_cc_vol']
+                self.run_params['fissile_atom_dens_cc'] = (
+                    self.run_params['fissile_atoms'] /
+                    self.run_params['net_cc_vol'])
             except KeyError:
                 print(f'No fission cross section')
                 pass
@@ -254,8 +256,9 @@ class DataHandler:
             fiss_xs = 584.8972e-24
             self.run_params['fissile_atoms'] = self.power_W / \
                 (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
-            self.run_params['fissile_atom_dens_cc'] = self.run_params['fissile_atoms'] / \
-                self.run_params['net_cc_vol']
+            self.run_params['fissile_atom_dens_cc'] = (
+                self.run_params['fissile_atoms'] /
+                self.run_params['net_cc_vol'])
             fiss_macro_xs = fiss_xs * self.run_params['fissile_atom_dens_cc']
             yield_data = [Yd,
                           Yc,
@@ -282,8 +285,10 @@ class DataHandler:
                                 1,
                                 1]
         else:
+            val = self.nuclide_target
+            num = self.num_nucs
             raise NotImplementedError(
-                f'Hardcoded {self.nuclide_target} not available with {self.num_nucs} nuclides')
+                f'Hardcoded {val} not available with {num} nuclides')
 
         for i in range(self.num_nucs):
             if debug:
