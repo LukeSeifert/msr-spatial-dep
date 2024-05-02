@@ -19,6 +19,8 @@ class DiffEqSolvers:
         data_params : dict
             ket : str
                 Name of data parameter
+        run : bool (optional)
+            Run a solver immediately
 
         """
         self.spacenodes = run_params['spacenodes']
@@ -168,14 +170,14 @@ class DiffEqSolvers:
 
         Parameters
         ----------
-        result_mat : 3D matrix
+        result_mat : :class:`np.ndarray`
             Holds values over time, space, and nuclide (in that order)
         time_index : int
             Current time index
 
         Returns
         -------
-        result_mat : 3D matrix
+        result_mat : :class:`np.ndarray`
             Holds values over time, space, and nuclide (in that order)
         """
         for nuclide in range(self.num_nucs):
@@ -211,12 +213,12 @@ class DiffEqSolvers:
         ----------
         conc : :class:`np.ndarray`
             Concentration over spatial nodes at previous time
-        isotope : int
+        nuclide_index : int
             Nuclide isobar indicator
 
         Returns
         -------
-        conc : 1D vector
+        conc : :class:`np.ndarray`
             Concentration over spatial nodes at current time
         """
         S_vec = self.S[nuclide_index]
@@ -235,6 +237,11 @@ class DiffEqSolvers:
     def ode_solve(self):
         """
         Solve the time dependent ODE
+
+        Returns
+        -------
+        ODE_result_mat : :class:`np.ndarray`
+            Holds concentrations over time, space, and nuclide (in that order)
 
         """
         self._initialize_concs()

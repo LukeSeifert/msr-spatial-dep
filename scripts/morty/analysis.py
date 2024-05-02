@@ -1,6 +1,7 @@
 import solvers
 import numpy as np
 from data import DataHandler
+from scipy import integrate
 
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
@@ -24,7 +25,6 @@ class AnalysisCollection:
         self.analysis_params = analysis_params
         self.run_params = run_params
         self.data_params = data_params
-
         return
     
     def _time_lab(self):
@@ -80,6 +80,7 @@ class AnalysisCollection:
         
         """
         xs, ys, labs = [], [], []
+        self.parasitic_results = []
         for method in methods:
             self.run_params[method_name] = method
             self.data_params = DataHandler(self.run_params).data_params
@@ -89,6 +90,7 @@ class AnalysisCollection:
             result_matrix = solvers.DiffEqSolvers(self.run_params, self.data_params).result_mat
             ys.append(result_matrix)
             labs.append(f'{method}{methodname_extension}')
+            self.parasitic_results.append(self._parasitic_abs(result_matrix))
         return xs, ys, labs
 
     def _save_data(self, xs, ys, labs, xlab, ylab, savename):
@@ -99,6 +101,7 @@ class AnalysisCollection:
         self.data['xlab'] = xlab
         self.data['ylab'] = ylab
         self.data['savename'] = savename
+        self.data['parasitic'] = self.parasitic_results
         num_nucs = []
         for i, x in enumerate(self.data['xs']):
             num_nucs.append(np.shape(self.data['ys'][i])[2])
@@ -123,6 +126,35 @@ class AnalysisCollection:
                 pcnt_diff = (data - final_data_points[-1]) / (final_data_points[-1]) * 100
                 print(f'Percent Diff of {final_names[data_i]} from most accurate: {pcnt_diff}%')
         return
+    
+
+    def _parasitic_abs(self, result_mat):
+        """
+        Calculates the amount of parasitic absorption for each nuclide
+            as atoms per cc as a function of time
+
+        Parameters
+        ----------
+        result_mat : :class:`np.ndarray`
+            Holds values over time, space, and nuclide (in that order)
+
+        Returns
+        -------
+        parasitic_abs_val : :class:`np.ndarray`
+            Parasitic absorption rates for nuclides over time in
+            atoms per cc
+        """
+        parasitic_abs_val = []
+        for nuclide in range(self.run_params['num_nuclides']):
+            paras_rate = []
+            for ti, t in enumerate(self.run_params['times']):
+                spat_avg_conc = np.mean(result_mat[ti, :, nuclide])
+                parasitic = spat_avg_conc * self.data_params['loss_rates'][nuclide]
+                paras_rate.append(parasitic)
+            integral_form = integrate.cumtrapz(paras_rate, self.run_params['times'])
+            integral_form = np.insert(integral_form, 0, 0.0)
+            parasitic_abs_val.append(integral_form)
+        return parasitic_abs_val
     
     def ode_pde_compare(self):
         """
