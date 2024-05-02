@@ -1,7 +1,6 @@
 import solvers
 import data
 import analysis
-import numpy as np
 import plotter
 
 
