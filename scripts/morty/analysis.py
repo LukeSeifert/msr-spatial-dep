@@ -7,8 +7,10 @@ from scipy import integrate
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
         """
-        This class contains a collection of analysis procedures which can be run.
-        The data is returned in an easily-plottable dictionary as well as saved to
+        This class contains a collection of analysis procedures which
+        can be run.
+        The data is returned in an easily-plottable dictionary as
+        well as saved to
         text files for future analysis.
 
         Parameters
@@ -153,10 +155,10 @@ class AnalysisCollection:
                 final_names.append(lab)
 
             for data_i, data in enumerate(final_data_points):
-                pcnt_diff = (
-                    data - final_data_points[-1]) / (final_data_points[-1]) * 100
-                print(
-                    f'Percent Diff of {final_names[data_i]} from most accurate: {pcnt_diff}%')
+                end_data = final_data_points[-1]
+                pcnt_diff = (data - end_data) / (end_data) * 100
+                name = final_names[data_i]
+                print(f'% diff {name} from most accurate: {pcnt_diff}%')
         return
 
     def _parasitic_abs(self, result_mat):
