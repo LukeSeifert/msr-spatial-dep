@@ -46,6 +46,21 @@ class DataHandler:
     
 
     def _get_tot_xs(self, cur_target):
+        """
+        Gets total and fission cross section data
+
+        Parameters
+        ----------
+        cur_target : str
+            Nuclide targeted for information (e.g. Xe135)
+        
+        Returns
+        -------
+        micro_net_xs : float
+            Microscopic total cross section
+        macro_fiss_xs : float
+            Macroscopic fission cross section for the fissile nuclide
+        """
         import openmc.data
         has_data = True
         fiss_xs = 0
@@ -157,6 +172,19 @@ class DataHandler:
     def hardcoded_data_gen(self, debug=False):
         """
         Hardocded data that does not require OpenMC
+
+        Parameters
+        ----------
+        debug : bool
+            Use simplified data for debugging purposes
+
+        Returns
+        -------
+        data_params : dict
+            key : str
+                Name of data collection
+            value : dict
+                Dictionary of results 
         """
         lams = {}
         FYs = {}
