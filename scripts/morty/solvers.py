@@ -61,6 +61,11 @@ class DiffEqSolvers:
             run_params['final_time'] +
             run_params['dt'],
             run_params['dt'])
+        run_params['power_W'] = self._power_hist(version=run_params['run_version'],
+                                        times=run_params['times'],
+                                        p0=run_params['p0'])
+
+
 
         self.incore_flowrate = run_params['incore_flowrate']
         self.excore_flowrate = run_params['excore_flowrate']
@@ -69,6 +74,8 @@ class DiffEqSolvers:
         self.positions = run_params['positions']
         self.dt = run_params['dt']
         self.times = run_params['times']
+        self.power = run_params['power_W']
+        self.p0 = run_params['p0']
 
         self.flow_vec = self._format_spatial(self.incore_flowrate,
                                              self.excore_flowrate)
@@ -98,6 +105,24 @@ class DiffEqSolvers:
             print(f'Took {round(took, 3)} seconds')
 
         return
+    
+    def _power_hist(self, version, times, p0):
+        power_vals = list()
+        if version == 'constant':
+            for t in times:
+                power_vals.append(p0)
+        elif version == 'sin':
+            for t in times:
+                power = p0 * abs(np.sin(np.pi * t / 60))
+                power_vals.append(power)
+        elif version == 'neg_exp':
+            for t in times:
+                power = p0 * np.exp(-t)
+                power_vals.append(power)
+
+        return power_vals
+
+
 
     def _format_spatial(self, term1, term2):
         """
@@ -164,13 +189,18 @@ class DiffEqSolvers:
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
 
-    def _update_sources(self):
+    def _update_sources(self, ti):
         """
         Update source terms based on concentrations
 
+        Parameters
+        ----------
+        ti : int
+            Current time index
+
         """
         for gain_nuc in range(self.num_nucs):
-            fission_source = self.FYs[gain_nuc]  # fiss/cc-s
+            fission_source = self.power[ti]/self.p0 * self.FYs[gain_nuc]  # fiss/cc-s
             decay_source = np.zeros(len(self.concs[gain_nuc]))
             for loss_nuc in range(self.num_nucs):
                 try:
@@ -184,6 +214,24 @@ class DiffEqSolvers:
             excore_source = decay_source
             cur_source = self._format_spatial(incore_source, excore_source)
             self.S[gain_nuc] = cur_source
+        return
+    
+    def _update_losses(self, ti):
+        """
+        Update loss terms based on power history
+
+        Parameters
+        ----------
+        ti : int
+            Current time index
+
+        """
+        for nuclide in range(self.num_nucs):
+            incore_losses = (self.lams[nuclide] + 
+                             self.power[ti]/self.p0 * self.loss_rates[nuclide])
+            excore_losses = self.lams[nuclide]
+            cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
+            self.mu[nuclide] = cur_nuc_losses
         return
 
     def _update_result_mat(self, result_mat, time_index):
@@ -269,7 +317,8 @@ class DiffEqSolvers:
         self._initialize_concs()
         ODE_result_mat = self._initialize_result_mat()
         for ti, t in enumerate(self.times[1:]):
-            self._update_sources()
+            self._update_sources(ti)
+            self._update_losses(ti)
 
             for nuclide in range(self.num_nucs):
                 self.concs[nuclide] = self._external_ODE_no_step(
@@ -293,8 +342,8 @@ class DiffEqSolvers:
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
         for ti, t in enumerate(self.times[:-1]):
-
-            self._update_sources()
+            self._update_sources(ti)
+            self._update_losses(ti)
 
             for nuclide in range(self.num_nucs):
                 self.concs[nuclide] = self._external_PDE_no_step(
