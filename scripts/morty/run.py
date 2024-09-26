@@ -2,6 +2,7 @@ import solvers
 import data
 import analysis
 import plotter
+import numpy as np
 
 
 def check_data(run_params, allowed_params):
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     plotting_params['plotting'] = True
     plotting_params['y_scale'] = 'log'
     plotting_params['gif'] = False
-    plotting_params['parasitic_absorption'] = True
+    plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
 
     analysis_params = {}
@@ -45,23 +46,24 @@ if __name__ == '__main__':
 
     run_params = {}
     run_params['scaled_flux'] = True
-    run_params['openmc_data_path'] = '/root/nndc_hdf5/'
+    run_params['openmc_data_path'] = '/home/luke/projects/cross-section-libraries/nndc_hdf5/'
     run_params['temperature'] = '294K'
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
     run_params['target_element'] = 'Xe'
     run_params['target_isobar'] = '135'
-    run_params['spacenodes'] = 10  # 200
+    run_params['spacenodes'] = 200 #10
     run_params['num_nuclides'] = 5
-    run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 5  # 1.25 * 24 * 3600
+    run_params['data_gen_option'] = 'openmc'
+    run_params['final_time'] = 1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 6e12
     run_params['net_length'] = 608.06
     run_params['frac_in'] = 0.33
     run_params['CFL_cond'] = 0.9
-    run_params['power_W'] = 8e6
+    run_params['p0'] = 8e6
+    run_params['run_version'] = 'constant'
 
     run_params['vol_flow_rate'] = 75708
     run_params['fuel_fraction'] = 0.225
@@ -69,16 +71,19 @@ if __name__ == '__main__':
     run_params['net_cc_vol'] = 2_116_111
     run_params['J_per_fiss'] = 3.2e-11
 
+
     allowed_params = {}
     available_temperatures = ['294K']
     available_energies = [0.0253, 500_000, 14_000_000]
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
+    available_versions = ['constant', 'sin', 'neg_exp']
 
     allowed_params['temperature'] = available_temperatures
     allowed_params['neutron_energy'] = available_energies
     allowed_params['data_gen_option'] = available_data
     allowed_params['solver_method'] = available_methods
+    allowed_params['run_version'] = available_versions
 
     check_data(run_params, allowed_params)
     data_params = data.DataHandler(run_params).data_params
@@ -106,6 +111,6 @@ if __name__ == '__main__':
 
     if analysis_params['spatial_refinement']:
         print('-' * 50)
-        spatial_nodes = [2, 5, 10, 100, 200, 500]
+        spatial_nodes = [5, 10, 100, 200, 500]
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
