@@ -185,8 +185,8 @@ class AnalysisCollection:
                 parasitic = spat_avg_conc * \
                     self.data_params['loss_rates'][nuclide]
                 paras_rate.append(parasitic)
-            integral_form = integrate.cumtrapz(
-                paras_rate, self.run_params['times'])
+            integral_form = integrate.cumulative_simpson(
+                paras_rate, x=self.run_params['times'])
             integral_form = np.insert(integral_form, 0, 0.0)
             parasitic_abs_val.append(integral_form)
         return parasitic_abs_val
