@@ -21,7 +21,7 @@ class DataHandler:
         if run_params['scaled_flux'] and run_params['solver_method'] == 'ODE':
             scaling_factor = run_params['frac_in']
         self.flux = run_params['flux'] * scaling_factor
-        self.power_W = run_params['power_W'] * scaling_factor
+        self.p0 = run_params['p0'] * scaling_factor
         self.nuclide_target = self.target_element + self.target_isobar
         data_gen_option = run_params['data_gen_option']
         self.run_params = run_params
@@ -118,7 +118,7 @@ class DataHandler:
                 reactions = hdf5_data_fissile.reactions[fission_MT]
                 fiss_xs_f = reactions._xs[self.temp]
                 fiss_xs = fiss_xs_f(self.energy) * 1e-24
-                self.run_params['fissile_atoms'] = self.power_W / \
+                self.run_params['fissile_atoms'] = self.p0 / \
                     (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
                 self.run_params['fissile_atom_dens_cc'] = (
                     self.run_params['fissile_atoms'] /
@@ -239,7 +239,7 @@ class DataHandler:
         tracked_element = self.target_element
         if self.nuclide_target == 'Xe135' and self.num_nucs <= 5:
             nuc_names = ['Xe135',
-                         'I315',
+                         'I135',
                          'Xe135m',
                          'Te135',
                          'Sb135']
@@ -254,7 +254,7 @@ class DataHandler:
             Yd_m1 = 0.0110156
             Yd = 0.000785125
             fiss_xs = 584.8972e-24
-            self.run_params['fissile_atoms'] = self.power_W / \
+            self.run_params['fissile_atoms'] = self.p0 / \
                 (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
             self.run_params['fissile_atom_dens_cc'] = (
                 self.run_params['fissile_atoms'] /
