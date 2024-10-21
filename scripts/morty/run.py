@@ -31,12 +31,14 @@ def check_data(run_params, allowed_params):
 
 
 if __name__ == '__main__':
+    np.set_printoptions(threshold=np.inf)
     plotting_params = {}
     plotting_params['plotting'] = True
-    plotting_params['y_scale'] = 'log'
+    plotting_params['y_scale'] = 'linear'
     plotting_params['gif'] = False
     plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
+    plotting_params['msre'] = True
 
     analysis_params = {}
     analysis_params['test_run'] = False
@@ -51,23 +53,30 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Xe'
-    run_params['target_isobar'] = '135'
-    run_params['spacenodes'] = 200 #10
-    run_params['num_nuclides'] = 5
+    run_params['target_element'] = 'Zr' #'Nb'
+    run_params['target_isobar'] = '95' #'95'
+    run_params['spacenodes'] = 5 #200
+    run_params['num_nuclides'] = 2
     run_params['data_gen_option'] = 'openmc'
-    run_params['final_time'] = 1.25 * 24 * 3600 #5
+    run_params['final_time'] = 10 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
-    run_params['flux'] = 6e12
-    run_params['net_length'] = 608.06
-    run_params['frac_in'] = 0.33
+    run_params['flux'] = 6e12 # 2.9e12
+    run_params['frac_in'] = 0.33 #0.272
     run_params['CFL_cond'] = 0.9
+    #run_params['num_times'] = int(5e5)
     run_params['p0'] = 8e6
-    run_params['run_version'] = 'constant'
+    run_params['power_version'] = 'msre'
+    run_params['fissile_atom_dens_cc'] = 8.41e19
 
-    run_params['vol_flow_rate'] = 75708
-    run_params['fuel_fraction'] = 0.225
-    run_params['core_rad'] = 140.335 / 2
+    # https://www.osti.gov/servlets/purl/1488384
+    run_params['residence_time'] = 8 # s
+    #run_params['linear_flow_rate'] = 600 # cm/s
+    run_params['linear_flow_rate'] = 21.75 #21.75 # cm/s
+    #run_params['net_length'] = run_params['residence_time'] * 600 #608.06 cm
+    run_params['net_length'] = 608.06
+    #run_params['vol_flow_rate'] = 75708
+    #run_params['fuel_fraction'] = 0.225
+    #run_params['core_rad'] = 140.335 / 2
     run_params['net_cc_vol'] = 2_116_111
     run_params['J_per_fiss'] = 3.2e-11
 
@@ -77,17 +86,17 @@ if __name__ == '__main__':
     available_energies = [0.0253, 500_000, 14_000_000]
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
-    available_versions = ['constant', 'sin', 'neg_exp']
+    available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step']
 
     allowed_params['temperature'] = available_temperatures
     allowed_params['neutron_energy'] = available_energies
     allowed_params['data_gen_option'] = available_data
     allowed_params['solver_method'] = available_methods
-    allowed_params['run_version'] = available_versions
+    allowed_params['power_version'] = available_versions
 
     check_data(run_params, allowed_params)
     data_params = data.DataHandler(run_params).data_params
-    solvers.DiffEqSolvers(run_params, data_params, run=False)
+    #solvers.DiffEqSolvers(run_params, data_params, run=False)
 
     analyzer = analysis.AnalysisCollection(
         analysis_params, run_params, data_params)
@@ -102,11 +111,12 @@ if __name__ == '__main__':
     if analysis_params['PDE_ODE_compare']:
         print('-' * 50)
         data_dict = analyzer.ode_pde_compare()
-        plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
+        plotter_tool.plot_gen(data_dict, spatial_eval_positions=[0, -1,
+                                                                 int(run_params['spacenodes']*run_params['frac_in'])])
 
     if analysis_params['nuclide_refinement']:
         print('-' * 50)
-        data_dict = analyzer.nuclide_refinement(max_nuc=6)
+        data_dict = analyzer.nuclide_refinement(max_nuc=5)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     if analysis_params['spatial_refinement']:

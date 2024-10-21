@@ -1,6 +1,6 @@
 import numpy as np
 from time import time
-
+import matplotlib.pyplot as plt
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -34,16 +34,15 @@ class DiffEqSolvers:
         run_params['excore_outlet'] = run_params['net_length']
         self.z_excore_outlet = run_params['excore_outlet']
         self.z_core_outlet = run_params['core_outlet']
-        self.CFL_cond = run_params['CFL_cond']
 
         run_params['incore_volume'] = run_params['net_cc_vol'] * \
             run_params['frac_in']
-        linear_flow_rate = (run_params['vol_flow_rate'] /
-                            (run_params['fuel_fraction'] *
-                             np.pi *
-                             (run_params['core_rad'])**2))
-        run_params['incore_flowrate'] = linear_flow_rate
-        run_params['excore_flowrate'] = linear_flow_rate
+        #linear_flow_rate = (run_params['vol_flow_rate'] /
+        #                    (run_params['fuel_fraction'] *
+        #                     np.pi *
+        #                     (run_params['core_rad'])**2))
+        run_params['incore_flowrate'] = run_params['linear_flow_rate']
+        run_params['excore_flowrate'] = run_params['linear_flow_rate']
         run_params['max_flowrate'] = max(
             run_params['incore_flowrate'],
             run_params['excore_flowrate'])
@@ -54,14 +53,19 @@ class DiffEqSolvers:
                 run_params['spacenodes']))[0]
         run_params['positions'] = np.linspace(
             0, run_params['excore_outlet'], run_params['spacenodes'])
-        run_params['dt'] = run_params['CFL_cond'] * \
-            run_params['dz'] / run_params['max_flowrate']
+        
+        #run_params['dt'] = run_params['final_time'] / run_params['num_times']
+        #run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
+        run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
+        self.CFL_cond = run_params['CFL_cond']
+        if self.CFL_cond > 0.9:
+            print(f'{run_params["CFL_cond"] = }')
         run_params['times'] = np.arange(
             0,
             run_params['final_time'] +
             run_params['dt'],
             run_params['dt'])
-        run_params['power_W'] = self._power_hist(version=run_params['run_version'],
+        run_params['power_W'] = self._power_hist(version=run_params['power_version'],
                                         times=run_params['times'],
                                         p0=run_params['p0'])
 
@@ -98,7 +102,7 @@ class DiffEqSolvers:
         if run:
             start = time()
             if run_params['solver_method'] == 'PDE':
-                self.res_mat = self.PDE_solver()
+                self.res_mat = self.pde_solve()
             elif run_params['solver_method'] == 'ODE':
                 self.res_mat = self.ode_solve()
             took = time() - start
@@ -108,17 +112,50 @@ class DiffEqSolvers:
     
     def _power_hist(self, version, times, p0):
         power_vals = list()
+
+        def _time_sorter(coarse_x, coarse_y, fine_x, scale=p0):
+            fine_y = []
+            for x in fine_x:
+                y = None
+                for i in range(len(coarse_x)-1):
+                    if coarse_x[i] <= x < coarse_x[i+1]:
+                        y = scale * coarse_y[i]
+                        break
+                fine_y.append(y)
+            return fine_y
+
+
         if version == 'constant':
             for t in times:
                 power_vals.append(p0)
         elif version == 'sin':
             for t in times:
-                power = p0 * abs(np.sin(np.pi * t / 60))
+                power = p0/2 * (np.sin(np.pi * t / 30) + 1)
                 power_vals.append(power)
         elif version == 'neg_exp':
             for t in times:
                 power = p0 * np.exp(-t)
                 power_vals.append(power)
+        elif version == 'step':
+            pulse_times = [
+        0, 1.25*24*3600, 1.25*24*3600+10*60, 1.25*24*3600*1e6
+]
+            pulse_rel_powers = [
+          1,           10,               10
+]
+            power_vals = _time_sorter(pulse_times, pulse_rel_powers, times)
+
+        elif version == 'msre':
+            newts = [0.0, 0.4166667, 1.0, 1.5, 2.0, 3.166667, 77.0, 80.0, 81.0, 82.25, 84.0, 86.0, 87.0, 87.5, 88.0, 88.5, 91.0, 95.0, 105.0, 108.0, 108.5, 112.0, 113.75, 115.0, 116.75, 122.5, 140.0, 141.0, 141.5, 153.5, 157.75, 163.5, 170.5, 171.5, 174.0, 262.3333, 265.0, 265.25, 280.0, 287.8333, 292.8333, 293.8333, 295.0, 296.25, 297.25, 324.9167, 338.5]
+            msre_times = np.asarray(newts) * 24 * 3600
+            msre_rel_powers = [0.03406, 0.0, 0.0681199, 0.0, 0.1362398, 0.0, 0.1362398, 0.0, 0.3405995, 0.0, 0.3405995, 0.0, 0.681199, 0.0, 0.681199, 0.0, 0.681199, 0.0, 0.722071, 0.0, 0.8855586, 0.0, 0.681199, 0.0, 0.9019073, 0.0, 1.0, 0.0, 0.9888076, 0.0, 1.0, 1.0, 0.0, 0.762943, 0.0, 0.7259027, 0.0, 0.8174387, 0.0, 0.9224797, 0.0, 1.0, 0.0, 1.0, 0.0, 0.8855586, 1.0]
+            power_vals = _time_sorter(msre_times, msre_rel_powers, times)
+
+        plt.step(times/(24*3600), power_vals, where='post')
+        plt.xlabel('Time [d]')
+        plt.ylabel('Power [W]')
+        plt.savefig('images/power_hist.png')
+        plt.close()
 
         return power_vals
 
@@ -270,8 +307,14 @@ class DiffEqSolvers:
         conc : float
             Concentration at current time
         """
-        conc = (conc + self.dt * (self.S[nuclide_index][0] -
-                                  self.mu[nuclide_index][0] * conc))
+        #conc = (conc + self.dt * (self.S[nuclide_index][0] -
+        #                          self.mu[nuclide_index][0] * conc))
+        #print(self.S[nuclide_index][0])
+        #print(self.mu[nuclide_index][0])
+        #print(self.mu[nuclide_index][-1])
+        #input()
+        conc = ((conc + self.S[nuclide_index][0] * self.dt) / (1 + self.mu[nuclide_index][0] * self.dt))
+
 
         return conc
 
@@ -300,7 +343,15 @@ class DiffEqSolvers:
         conc_mult = 1 - mu_vec * self.dt
         add_source = S_vec * self.dt
         CFL_vec = (self.flow_vec * self.dt / dz)
-        conc = add_source + conc_mult * conc + CFL_vec * (conc[Jm1] - conc)
+        #conc = add_source + conc_mult * conc + CFL_vec * (conc[Jm1] - conc)
+        #print(S_vec[0])
+        #print(S_vec[-1])
+        #print(mu_vec[0])
+        #print(mu_vec[-1])
+        #input()
+        #conc = conc + self.dt * (S_vec - mu_vec*conc - self.flow_vec * (conc - conc[Jm1])/dz)
+        conc = ((conc + self.dt * (S_vec + self.flow_vec/dz * (conc[Jm1] - conc))) / (1 + mu_vec * self.dt))
+
 
         return conc
 
@@ -328,7 +379,7 @@ class DiffEqSolvers:
         self.result_mat = ODE_result_mat
         return ODE_result_mat
 
-    def PDE_solver(self):
+    def pde_solve(self):
         """
         Runs the PDE solver to generate the time and space dependent
             concentrations for each nuclide.
