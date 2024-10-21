@@ -135,6 +135,7 @@ class AnalysisCollection:
         self.data['savename'] = savename
         self.data['parasitic'] = self.parasitic_results
         num_nucs = []
+        split_index = int(self.run_params['spacenodes'] * self.run_params['frac_in'])
         for i, x in enumerate(self.data['xs']):
             num_nucs.append(np.shape(self.data['ys'][i])[2])
 
@@ -146,10 +147,14 @@ class AnalysisCollection:
                 nuclide = self.data_params['tracked_nucs'][nuclide_i]
                 try:
                     y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                    y2 = np.mean(self.data['ys'][i][:, :split_index, nuclide_i], axis=1)
+                    y3 = np.mean(self.data['ys'][i][:, split_index:, nuclide_i], axis=1)
                 except IndexError:
                     continue
                 lab = f'{self.data["labs"][i]} {nuclide}'
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
+                self.data[f'in_avg_y_method{i}_nuc{nuclide_i}'] = y2
+                self.data[f'ex_avg_y_method{i}_nuc{nuclide_i}'] = y3
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
                 final_names.append(lab)
@@ -158,7 +163,7 @@ class AnalysisCollection:
                 end_data = final_data_points[-1]
                 pcnt_diff = (data - end_data) / (end_data) * 100
                 name = final_names[data_i]
-                print(f'% diff {name} from most accurate: {pcnt_diff}%')
+                print(f'avg % diff {name} from most accurate: {pcnt_diff}%')
         return
 
     def _parasitic_abs(self, result_mat):
@@ -177,15 +182,18 @@ class AnalysisCollection:
             Parasitic absorption rates for nuclides over time in
             atoms per cc
         """
+        # Warning: This function does not work properly
         parasitic_abs_val = []
+        midpoint = int(self.run_params['spacenodes']*self.run_params['frac_in'])
         for nuclide in range(self.run_params['num_nuclides']):
             paras_rate = []
             for ti, t in enumerate(self.run_params['times']):
+                # TODO - this doesn't properly account for the in-core ex-core diff
                 spat_avg_conc = np.mean(result_mat[ti, :, nuclide])
                 parasitic = spat_avg_conc * \
                     self.data_params['loss_rates'][nuclide]
                 paras_rate.append(parasitic)
-            integral_form = integrate.cumulative_simpson(
+            integral_form = integrate.cumulative_trapezoid(
                 paras_rate, x=self.run_params['times'])
             integral_form = np.insert(integral_form, 0, 0.0)
             parasitic_abs_val.append(integral_form)
@@ -202,7 +210,7 @@ class AnalysisCollection:
                 Name of variable
         """
         current_solver = self.run_params['solver_method']
-        methods = ['ODE', 'PDE']
+        methods = ['PDE', 'ODE']
         ylab = 'Concentration [atoms/cc]'
         savename = 'PDE_ODE_comparison'
         time_factor, xlab = self._time_lab()
