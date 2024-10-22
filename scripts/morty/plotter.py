@@ -131,10 +131,12 @@ class PlotterCollection:
                 try:
                     lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
                     y = data_dict[f'{data_str}_avg_y_method{i}_nuc{nuclide_i}']
-
-                    self.plot_dict['times'] = data_dict['xs'][i]
-                    self.plot_dict['data'] = data_dict[f'{data_str}_avg_y_method{i}_nuc{nuclide_i}']
-                    self.plot_obj.collect_data(data_dict, lab)
+                    nuc = self.data_params['tracked_nucs'][nuclide_i]
+                    
+                    if data_str == 'spat':
+                        self.plot_dict['times'] = data_dict['xs'][i]
+                        self.plot_dict['data'][nuc] = data_dict[f'spat_avg_y_method{i}_nuc{nuclide_i}']
+                        self.plot_obj.collect_data(self.plot_dict, data_dict['labs'][i])
 
                 except KeyError:
                     continue
@@ -337,8 +339,8 @@ class PlotterCollection:
         self.plot_obj = PlotHolder()
         self.plot_dict = {}
         self.plot_dict['data'] = {}
-        self.plot_obj.plot_data()
         self.plot_time(data_dict)
+        self.plot_obj.plot_data(self.imdir)
         #self.write_csv(data_dict)
         self.plot_space(data_dict)
         for pos in spatial_eval_positions:

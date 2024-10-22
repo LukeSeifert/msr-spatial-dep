@@ -19,10 +19,10 @@ class PlotHolder:
         self._add_cur_data(cur_data, label)
         return
     
-    def plot_data(self):
+    def plot_data(self, imdir):
         #self._setup_print()
         nucs = self.data[self.msre].keys()
-        colors = ['blue', 'orange']
+        colors = ['blue', 'orange', 'green']
         other_count = 0
         for nuc in nucs:
             for version in self.data.keys():
@@ -47,8 +47,9 @@ class PlotHolder:
             plt.xlabel('Time [d]')
             plt.ylabel('Concentration [atoms/cc]')
             plt.legend()
-            plt.savefig(f'test_{nuc}.png')
+            plt.savefig(f'{imdir}experimental_{nuc}.png')
             plt.close()
+        return
 
     
     def _setup_print(self):
