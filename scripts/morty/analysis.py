@@ -56,6 +56,22 @@ class AnalysisCollection:
             xlab = f'Time [{label_list[ti]}]'
             scaling_factor = 1 / time
             return scaling_factor, xlab
+        
+    def _run_assist(self, method_name, xfactor, methodname_extension, method:str=''):
+        if method == '':
+            self.run_params[method_name] = method
+        self.data_params = DataHandler(self.run_params).data_params
+        solver = solvers.DiffEqSolvers(
+            self.run_params, self.data_params, run=False)
+        x_vals = solver.run_params['times']
+        x = xfactor * x_vals
+        result_matrix = solvers.DiffEqSolvers(
+            self.run_params, self.data_params).result_mat
+        y = result_matrix
+        lab = f'{method}{methodname_extension}'
+        self.parasitic_results.append(self._parasitic_abs(result_matrix))
+        return x, y, lab
+
 
     def _method_change(
             self,
@@ -92,17 +108,11 @@ class AnalysisCollection:
         xs, ys, labs = [], [], []
         self.parasitic_results = []
         for method in methods:
-            self.run_params[method_name] = method
-            self.data_params = DataHandler(self.run_params).data_params
-            solver = solvers.DiffEqSolvers(
-                self.run_params, self.data_params, run=False)
-            x_vals = solver.run_params['times']
-            xs.append(xfactor * x_vals)
-            result_matrix = solvers.DiffEqSolvers(
-                self.run_params, self.data_params).result_mat
-            ys.append(result_matrix)
-            labs.append(f'{method}{methodname_extension}')
-            self.parasitic_results.append(self._parasitic_abs(result_matrix))
+            x, y, lab = self._run_assist(method_name, xfactor,
+                                         methodname_extension, method)
+            xs.append(x)
+            ys.append(y)
+            labs.append(lab)
         return xs, ys, labs
 
     def _save_data(self, xs, ys, labs, xlab, ylab, savename):
@@ -198,6 +208,31 @@ class AnalysisCollection:
             integral_form = np.insert(integral_form, 0, 0.0)
             parasitic_abs_val.append(integral_form)
         return parasitic_abs_val
+    
+    def test_run(self, name):
+        """
+        Run with current parameters.
+
+        Returns
+        -------
+        data : dict
+            key : str
+                Name of variable
+        """
+        ylab = 'Concentration [atoms/cc]'
+        savename = 'test_run'
+        self.parasitic_results = []
+        time_factor, xlab = self._time_lab()
+        xs, ys, labs = [], [], []
+        x, y, lab = self._run_assist(method_name=name, xfactor=time_factor,
+                                     methodname_extension=name)
+        xs.append(x)
+        ys.append(y)
+        labs.append(lab)
+        self._save_data(xs, ys, labs, xlab, ylab, savename)
+
+        data = self.data
+        return data
 
     def ode_pde_compare(self):
         """

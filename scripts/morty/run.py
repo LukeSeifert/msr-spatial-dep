@@ -38,11 +38,10 @@ if __name__ == '__main__':
     plotting_params['gif'] = False
     plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
-    plotting_params['msre'] = True
 
     analysis_params = {}
-    analysis_params['test_run'] = False
-    analysis_params['PDE_ODE_compare'] = True
+    analysis_params['test_run'] = True
+    analysis_params['PDE_ODE_compare'] = False
     analysis_params['nuclide_refinement'] = False
     analysis_params['spatial_refinement'] = False
 
@@ -59,7 +58,7 @@ if __name__ == '__main__':
     run_params['num_nuclides'] = 2
     run_params['data_gen_option'] = 'openmc'
     run_params['final_time'] = 10 #29_210_400 #1.25 * 24 * 3600 #5
-    run_params['solver_method'] = 'PDE'
+    run_params['solver_method'] = 'ODE'
     run_params['flux'] = 6e12 # 2.9e12
     run_params['frac_in'] = 0.33 #0.272
     run_params['CFL_cond'] = 0.9
@@ -105,8 +104,8 @@ if __name__ == '__main__':
 
     if analysis_params['test_run']:
         print('-' * 50)
-        result_matrix = solvers.DiffEqSolvers(
-            run_params, data_params).result_mat
+        data_dict = analyzer.test_run(name='Scaled ODE')
+        plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     if analysis_params['PDE_ODE_compare']:
         print('-' * 50)
