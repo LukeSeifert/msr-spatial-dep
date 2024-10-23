@@ -88,11 +88,12 @@ class DiffEqSolvers:
         self.loss_rates = data_params['loss_rates']
         self.dec_fracs = data_params['dec_frac']
         self.FYs = data_params['FYs']
+        self.reprs = data_params['repr_rates']
 
         self.mu = {}
         for nuclide in range(self.num_nucs):
             incore_losses = self.lams[nuclide] + self.loss_rates[nuclide]
-            excore_losses = self.lams[nuclide]
+            excore_losses = self.lams[nuclide] + self.reprs[nuclide]
             cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
 
@@ -266,7 +267,7 @@ class DiffEqSolvers:
         for nuclide in range(self.num_nucs):
             incore_losses = (self.lams[nuclide] + 
                              self.power[ti]/self.p0 * self.loss_rates[nuclide])
-            excore_losses = self.lams[nuclide]
+            excore_losses = self.lams[nuclide] + self.reprs[nuclide]
             cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
         return
