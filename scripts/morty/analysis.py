@@ -58,7 +58,7 @@ class AnalysisCollection:
             return scaling_factor, xlab
         
     def _run_assist(self, method_name, xfactor, methodname_extension, method:str=''):
-        if method == '':
+        if method != '':
             self.run_params[method_name] = method
         self.data_params = DataHandler(self.run_params).data_params
         solver = solvers.DiffEqSolvers(
