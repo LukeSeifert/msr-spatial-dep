@@ -34,14 +34,16 @@ if __name__ == '__main__':
     np.set_printoptions(threshold=np.inf)
     plotting_params = {}
     plotting_params['plotting'] = True
-    plotting_params['y_scale'] = 'linear'
+    plotting_params['y_scale'] = 'log'
     plotting_params['gif'] = False
     plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
+    plotting_params['msre'] = False
 
     analysis_params = {}
-    analysis_params['test_run'] = True
-    analysis_params['PDE_ODE_compare'] = False
+    analysis_params['test_run'] = False
+    test_name = 'Scaled Flux'
+    analysis_params['PDE_ODE_compare'] = True
     analysis_params['nuclide_refinement'] = False
     analysis_params['spatial_refinement'] = False
 
@@ -52,20 +54,24 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Zr' #'Nb'
-    run_params['target_isobar'] = '95' #'95'
-    run_params['spacenodes'] = 5 #200
-    run_params['num_nuclides'] = 2
+    run_params['target_element'] = 'Xe' #'Nb'
+    run_params['target_isobar'] = '135' #'95'
+    run_params['spacenodes'] = 200
+    run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'openmc'
-    run_params['final_time'] = 10 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'ODE'
     run_params['flux'] = 6e12 # 2.9e12
     run_params['frac_in'] = 0.33 #0.272
     run_params['CFL_cond'] = 0.9
     #run_params['num_times'] = int(5e5)
     run_params['p0'] = 8e6
-    run_params['power_version'] = 'msre'
-    run_params['fissile_atom_dens_cc'] = 8.41e19
+    run_params['power_version'] = 'step'
+   # run_params['fissile_atom_dens_cc'] = 8.41e19
+    run_params['reprocessing'] = {'Xe': 1/20,
+                                  'I' : 1/20,
+                                  'Te': 1/20,
+                                  'Sb': 1/20}
 
     # https://www.osti.gov/servlets/purl/1488384
     run_params['residence_time'] = 8 # s
@@ -104,7 +110,7 @@ if __name__ == '__main__':
 
     if analysis_params['test_run']:
         print('-' * 50)
-        data_dict = analyzer.test_run(name='Scaled ODE')
+        data_dict = analyzer.test_run(name=test_name)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     if analysis_params['PDE_ODE_compare']:
@@ -115,11 +121,11 @@ if __name__ == '__main__':
 
     if analysis_params['nuclide_refinement']:
         print('-' * 50)
-        data_dict = analyzer.nuclide_refinement(max_nuc=5)
+        data_dict = analyzer.nuclide_refinement(max_nuc=6)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     if analysis_params['spatial_refinement']:
         print('-' * 50)
-        spatial_nodes = [5, 10, 100, 200, 500]
+        spatial_nodes = [5, 10, 100, 200, 500, 1000]
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
