@@ -17,11 +17,11 @@ class DataHandler:
         self.target_element = run_params['target_element']
         self.target_isobar = run_params['target_isobar']
         self.num_nucs = run_params['num_nuclides']
-        scaling_factor = 1
+        self.scaling_factor = 1
         if run_params['scaled_flux'] and run_params['solver_method'] == 'ODE':
-            scaling_factor = run_params['frac_in']
-        self.flux = run_params['flux'] * scaling_factor
-        self.p0 = run_params['p0'] * scaling_factor
+            self.scaling_factor = run_params['frac_in']
+        self.flux = run_params['flux'] * self.scaling_factor
+        self.p0 = run_params['p0'] * self.scaling_factor
         self.nuclide_target = self.target_element + self.target_isobar
         data_gen_option = run_params['data_gen_option']
         self.run_params = run_params
@@ -154,6 +154,7 @@ class DataHandler:
         loss_rates = {}
         decay_frac = {}
         tracked_nucs = {}
+        repr_val = {}
         tracked_element = self.target_element
 
         chain = openmc.deplete.Chain.from_xml(self.chain_path)
@@ -170,6 +171,10 @@ class DataHandler:
             lams[i] = openmc.data.decay_constant(cur_target)
             net_xs, _ = self._get_tot_xs(cur_target)
             FYs[i] = self.flux * fiss_xs * yield_fracs[self.energy][cur_target]
+            try:
+                repr_val[i] = self.run_params['reprocessing'][tracked_element] * (1-self.scaling_factor)
+            except KeyError:
+                repr_val[i] = 0
             loss_rates[i] = net_xs * self.flux
 
             decays = chain.nuclides[chain.nuclide_dict[cur_target]].decay_modes
@@ -185,6 +190,7 @@ class DataHandler:
                         decay_frac[(i, feed_val)] = ratio
                         continue
                     decay_frac[(i, feeds + 2)] = ratio
+                    target_element = target[:2]
 
                     i += 1
                     if i >= self.num_nucs:
@@ -192,6 +198,10 @@ class DataHandler:
                     tracked_nucs[i] = target
                     net_xs, _ = self._get_tot_xs(cur_target)
                     loss_rates[i] = net_xs * self.flux
+                    try:
+                        repr_val[i] = self.run_params['reprocessing'][tracked_element] * (1-self.scaling_factor)
+                    except KeyError:
+                        repr_val[i] = 0
                     lams[i] = openmc.data.decay_constant(target)
                     FYs[i] = self.flux * fiss_xs * \
                         yield_fracs[self.energy][target]
@@ -212,6 +222,8 @@ class DataHandler:
         data_params['dec_frac'] = decay_frac
         data_params['tracked_nucs'] = tracked_nucs
         data_params['loss_rates'] = loss_rates
+        data_params['repr_rates'] = repr_val
+        print(data_params)
         return data_params
 
     def hardcoded_data_gen(self, debug=False):
@@ -236,6 +248,7 @@ class DataHandler:
         loss_rates = {}
         decay_frac = {}
         tracked_nucs = {}
+        repr_val = {}
         tracked_element = self.target_element
         if self.nuclide_target == 'Xe135' and self.num_nucs <= 5:
             nuc_names = ['Xe135',
@@ -243,9 +256,9 @@ class DataHandler:
                          'Xe135m',
                          'Te135',
                          'Sb135']
-            half_life_data = [(15.29 * 3600),
+            half_life_data = [(9.14 * 3600),
                               (6.57 * 3600),
-                              (9.14 * 3600),
+                              (15.29 * 3600),
                               19,
                               1.68]
             Ya = 0.00145764
@@ -278,7 +291,7 @@ class DataHandler:
                                      (2, 0),
                                      (3, 1),
                                      (4, 3)]
-            decay_fracs_data = [1,
+            decay_fracs_data = [0,
                                 0.8349109,
                                 0.1650891,
                                 1,
@@ -290,20 +303,26 @@ class DataHandler:
             raise NotImplementedError(
                 f'Hardcoded {val} not available with {num} nuclides')
 
+        debug = False
         for i in range(self.num_nucs):
-            if debug:
-                print('MODIFIED HARDCODED DATA FOR TESTING')
-                tracked_nucs[i] = nuc_names[i]
-                lams[i] = 1e-20
-                FYs[i] = 1  # a/cc-s
-                loss_rates[i] = 0
             tracked_nucs[i] = nuc_names[i]
             lams[i] = np.log(2) / half_life_data[i]
+            repr_val[i] = 0
             FYs[i] = fiss_macro_xs * yield_data[i] * self.flux
             loss_rates[i] = net_xs_data[i] * self.flux
             for pathi, path in enumerate(decay_chain_path_data):
                 if i == path[0]:
                     decay_frac[path] = decay_fracs_data[pathi]
+            if debug:
+                print('MODIFIED HARDCODED DATA FOR TESTING')
+                tracked_nucs[i] = nuc_names[i]
+                lams[i] = 1e-10
+                repr_val[i] = 0
+                scaling_factor = 1
+                if self.run_params['scaled_flux'] and self.run_params['solver_method'] == 'ODE':
+                    scaling_factor = self.run_params['frac_in']
+                loss_rates[i] = 1 * scaling_factor
+                FYs[i] = 1 * scaling_factor  # a/cc-s
 
         data_params = {}
         data_params['lams'] = lams
@@ -311,4 +330,6 @@ class DataHandler:
         data_params['dec_frac'] = decay_frac
         data_params['tracked_nucs'] = tracked_nucs
         data_params['loss_rates'] = loss_rates
+        data_params['repr_rates'] = repr_val
+        print(data_params)
         return data_params
