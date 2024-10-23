@@ -158,7 +158,7 @@ class PlotterCollection:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
             self._time_plot_helper(data_dict, nuclide_i, ending,
                                     spatial_eval_node)
-            if pcnt_diff_bool:
+            if pcnt_diff_bool and not initial_data:
                 for i, x in enumerate(data_dict['xs']):
                     if i == 0:
                         continue
@@ -233,7 +233,7 @@ class PlotterCollection:
             for i, x in enumerate(data_dict['xs']):
                 try:
                     y = data_dict['ys'][i][-1, :, nuclide_i]
-                except KeyError:
+                except (KeyError, IndexError):
                     continue
                 lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
 
@@ -241,7 +241,7 @@ class PlotterCollection:
                         marker='.')
             plt.legend()
             plt.xlabel('Space [cm]')
-            max_conc = np.max(data_dict['ys'][i][:, :, nuclide_i])
+            max_conc = np.max(data_dict['ys'][i][-1, :, nuclide_i])
             plt.vlines(self.run_params['core_outlet'], 0, 1e1 * max_conc,
                         color='black')
             plt.ylabel('Concentration [at/cc]')
@@ -340,7 +340,8 @@ class PlotterCollection:
         self.plot_dict = {}
         self.plot_dict['data'] = {}
         self.plot_time(data_dict)
-        self.plot_obj.plot_data(self.imdir)
+        if self.plotting_params['msre']:
+            self.plot_obj.plot_data(self.imdir)
         #self.write_csv(data_dict)
         self.plot_space(data_dict)
         for pos in spatial_eval_positions:
