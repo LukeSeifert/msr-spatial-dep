@@ -7,7 +7,7 @@ class PlotHolder:
         self.data = {}
         self.times = {}
         self.msre = 'MSRE Experimental Data'
-        self.adder = 'MCNP/ADDER Data'
+        self.adder = 'MCNP/ADDER Results'
 
         self.data[self.msre] = {}
         self.data[self.adder] = {}
@@ -22,7 +22,7 @@ class PlotHolder:
     def plot_data(self, imdir):
         #self._setup_print()
         nucs = self.data[self.msre].keys()
-        colors = ['blue', 'orange', 'green']
+        colors = ['blue', 'orange', 'green', 'cyan', 'olive', 'pink']
         other_count = 0
         for nuc in nucs:
             for version in self.data.keys():
@@ -37,7 +37,7 @@ class PlotHolder:
                 else:
                     marker = ''
                     linestyle = '--'
-                    color = colors[other_count]
+                    color = colors[other_count%len(colors)]
                     other_count += 1
 
                 plt.plot(np.asarray(self.times[version])/(24*3600),
@@ -46,7 +46,7 @@ class PlotHolder:
                          markersize=5)
             plt.xlabel('Time [d]')
             plt.ylabel('Concentration [atoms/cc]')
-            plt.legend()
+            plt.legend(prop={'size': 12})
             plt.savefig(f'{imdir}experimental_{nuc}.png')
             plt.close()
         return
@@ -291,7 +291,7 @@ class PlotHolder:
 
     def _add_cur_data(self, cur_data, label):
         self.data[label] = {}
-        self.times[label] = cur_data['times']
+        self.times[label] = np.asarray(cur_data['times']) * 24 * 3600
         for nuc in cur_data['data'].keys():
             self.data[label][nuc] = cur_data['data'][nuc]
         return
