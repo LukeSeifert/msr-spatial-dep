@@ -242,10 +242,11 @@ class PlotterCollection:
             plt.legend()
             plt.xlabel('Space [cm]')
             max_conc = np.max(data_dict['ys'][i][-1, :, nuclide_i])
+            min_conc = np.min(data_dict['ys'][i][-1, :, nuclide_i])
             plt.vlines(self.run_params['core_outlet'], 0, 1e1 * max_conc,
                         color='black')
             plt.ylabel('Concentration [at/cc]')
-            plt.ylim((1e-5 * max_conc, 1e1 * max_conc))
+            plt.ylim((min_conc, max_conc))
             plt.yscale(self.yscale)
             
 
