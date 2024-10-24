@@ -101,19 +101,25 @@ class DataHandler:
             Macroscopic fission cross section for the fissile nuclide
         """
         import openmc.data
-        has_data = True
+        has_net_data = True
+        has_fiss_data = True
         fiss_xs = 0
         fission_MT = 18
+        micro_net_xs = 0
         try:
             hdf5_data_fissile = openmc.data.IncidentNeutron.from_hdf5(
                 f'{self.openmc_data_path}{self.fissile_nuclide}.h5')
+        except FileNotFoundError:
+            print(f'{self.fissile_nuclide} does not have XS data')
+            has_fiss_data = False
+        try:
             hdf5_data_target = openmc.data.IncidentNeutron.from_hdf5(
                 f'{self.openmc_data_path}{cur_target}.h5')
         except FileNotFoundError:
             print(f'{cur_target} does not have XS data')
-            has_data = False
+            has_net_data = False
         net_xs = 0
-        if has_data:
+        if has_fiss_data:
             try:
                 reactions = hdf5_data_fissile.reactions[fission_MT]
                 fiss_xs_f = reactions._xs[self.temp]
@@ -126,6 +132,7 @@ class DataHandler:
             except KeyError:
                 print(f'No fission cross section')
                 pass
+        if has_net_data:
             for MT in self.endf_mt_total:
                 try:
                     f = hdf5_data_target.reactions[MT]._xs[self.temp]
@@ -250,6 +257,7 @@ class DataHandler:
         tracked_nucs = {}
         repr_val = {}
         tracked_element = self.target_element
+        fiss_xs = 584.8972e-24
         if self.nuclide_target == 'Xe135' and self.num_nucs <= 5:
             nuc_names = ['Xe135',
                          'I135',
@@ -266,7 +274,6 @@ class DataHandler:
             Yc = 0.0292737
             Yd_m1 = 0.0110156
             Yd = 0.000785125
-            fiss_xs = 584.8972e-24
             self.run_params['fissile_atoms'] = self.p0 / \
                 (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
             self.run_params['fissile_atom_dens_cc'] = (
@@ -297,11 +304,71 @@ class DataHandler:
                                 1,
                                 1,
                                 1]
+
+        elif self.nuclide_target == 'Zr95' and self.num_nucs <= 8:
+            nuc_names = ['Zr95',
+                         'Y95',
+                         'Sr95',
+                         'Rb95',
+                         'Kr95',
+                         'Br95',
+                         'Rb96',
+                         'Kr96']
+            lam_data = [1.25e-7,
+                        0.00112,
+                        0.029,
+                        1.835,
+                        6.080,
+                        10.502,
+                        3.4145,
+                        8.66434]
+            half_life_data = [np.log(2) / i for i in lam_data]
+            self.run_params['fissile_atoms'] = self.p0 / \
+                (self.run_params['J_per_fiss'] * self.flux * fiss_xs)
+            self.run_params['fissile_atom_dens_cc'] = (
+                self.run_params['fissile_atoms'] /
+                self.run_params['net_cc_vol'])
+            fiss_macro_xs = fiss_xs * self.run_params['fissile_atom_dens_cc']
+            yield_data = [0.00127244,
+                          0.011054,
+                          0.0453728,
+                          0.00763687,
+                          7.18e-5,
+                          2.52e-8,
+                          0.00168422,
+                          0.000378113]
+            net_xs_data = [6.933872e-24,
+                           0,
+                           0,
+                           0,
+                           0,
+                           0,
+                           0,
+                           0]
+            decay_chain_path_data = [(0, -1),
+                                     (1, 0),
+                                     (2, 1),
+                                     (3, 2),
+                                     (4, 3),
+                                     (5, 4),
+                                     (6, 2),
+                                     (7, 3),
+                                     (7, 6)]
+            decay_fracs_data = [1,
+                                1,
+                                1,
+                                0.913,
+                                0.963552,
+                                0.00167,
+                                0.134,
+                                0.037,
+                                0.96]
         else:
             val = self.nuclide_target
             num = self.num_nucs
             raise NotImplementedError(
                 f'Hardcoded {val} not available with {num} nuclides')
+
 
         debug = False
         for i in range(self.num_nucs):
@@ -323,6 +390,8 @@ class DataHandler:
                     scaling_factor = self.run_params['frac_in']
                 loss_rates[i] = 1 * scaling_factor
                 FYs[i] = 1 * scaling_factor  # a/cc-s
+
+
 
         data_params = {}
         data_params['lams'] = lams
