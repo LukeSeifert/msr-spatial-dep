@@ -6,8 +6,8 @@ class PlotHolder:
     def __init__(self):
         self.data = {}
         self.times = {}
-        self.msre = 'MSRE Experimental Data'
-        self.adder = 'MCNP/ADDER Results'
+        self.msre = 'MSRE Data'
+        self.adder = 'MCNP/ADDER'
 
         self.data[self.msre] = {}
         self.data[self.adder] = {}
@@ -21,10 +21,10 @@ class PlotHolder:
     
     def plot_data(self, imdir):
         #self._setup_print()
-        nucs = self.data[self.msre].keys()
+        nucs = self.data[self.adder].keys()
         colors = ['blue', 'orange', 'green', 'cyan', 'olive', 'pink']
-        other_count = 0
         for nuc in nucs:
+            other_count = 0
             for version in self.data.keys():
                 if version == self.msre:
                     marker = '.'
@@ -39,14 +39,16 @@ class PlotHolder:
                     linestyle = '--'
                     color = colors[other_count%len(colors)]
                     other_count += 1
-
-                plt.plot(np.asarray(self.times[version])/(24*3600),
-                         self.data[version][nuc], label=version,
-                         linestyle=linestyle, marker=marker, color=color,
-                         markersize=5)
+                try:
+                    plt.plot(np.asarray(self.times[version])/(24*3600),
+                            self.data[version][nuc], label=version,
+                            linestyle=linestyle, marker=marker, color=color,
+                            markersize=5)
+                except KeyError:
+                    continue
             plt.xlabel('Time [d]')
             plt.ylabel('Concentration [atoms/cc]')
-            plt.legend(prop={'size': 12})
+            plt.legend(prop={'size': 10})
             plt.savefig(f'{imdir}experimental_{nuc}.png')
             plt.close()
         return
@@ -75,13 +77,13 @@ class PlotHolder:
     
     def _add_MSRE_data(self):
         self.times[self.msre] = [
-        1.024560E+07,
-        1.036800E+07,
-        1.317600E+07,
-        1.391040E+07,
-        1.441440E+07,
-        1.555200E+07,
-        2.229120E+07]
+        1.028880E+07,
+        1.046160E+07,
+        1.331280E+07,
+        1.409040E+07,
+        1.469520E+07,
+        2.221200E+07,
+        2.921040E+07]
 
         self.data[self.msre]['Zr95'] = [
         np.nan,
@@ -91,6 +93,16 @@ class PlotHolder:
         2.04176E+16,
         1.85615E+16,
         1.67053E+16
+        ]
+
+        self.data[self.msre]['Nb95'] = [
+        np.nan,
+        np.nan,
+        np.nan,
+        np.nan,
+        4.06E+16,
+        8.11E+15,
+        1.13E+15
         ]
 
         return
@@ -287,6 +299,102 @@ class PlotHolder:
         1.17E+16,
         1.71E+16,
         1.71E+16
+        ]
+
+        self.data[self.adder]['Nb95'] = [
+            0.00E+00,
+            1.91E+10,
+            1.91E+10,
+            7.41E+10,
+            7.41E+10,
+            1.76E+11,
+            1.76E+11,
+            3.35E+11,
+            3.35E+11,
+            1.31E+12,
+            1.31E+12,
+            3.42E+13,
+            3.42E+13,
+            3.80E+13,
+            3.80E+13,
+            4.06E+13,
+            4.06E+13,
+            4.54E+13,
+            4.54E+13,
+            5.42E+13,
+            5.42E+13,
+            6.82E+13,
+            6.82E+13,
+            7.72E+13,
+            7.72E+13,
+            8.21E+13,
+            8.21E+13,
+            8.75E+13,
+            8.75E+13,
+            9.34E+13,
+            9.34E+13,
+            1.24E+14,
+            1.24E+14,
+            2.04E+14,
+            2.04E+14,
+            4.41E+14,
+            4.41E+14,
+            5.19E+14,
+            5.19E+14,
+            5.35E+14,
+            5.35E+14,
+            6.74E+14,
+            6.74E+14,
+            7.55E+14,
+            7.55E+14,
+            8.13E+14,
+            8.13E+14,
+            8.96E+14,
+            8.96E+14,
+            1.23E+15,
+            1.23E+15,
+            2.13E+15,
+            2.13E+15,
+            2.17E+15,
+            2.17E+15,
+            2.19E+15,
+            2.19E+15,
+            2.99E+15,
+            2.99E+15,
+            3.34E+15,
+            3.34E+15,
+            3.83E+15,
+            3.83E+15,
+            4.57E+15,
+            4.57E+15,
+            4.68E+15,
+            4.68E+15,
+            4.96E+15,
+            4.96E+15,
+            5.79E+15,
+            5.79E+15,
+            5.72E+15,
+            5.72E+15,
+            5.71E+15,
+            5.71E+15,
+            5.86E+15,
+            5.86E+15,
+            6.08E+15,
+            6.08E+15,
+            6.24E+15,
+            6.24E+15,
+            6.28E+15,
+            6.28E+15,
+            6.32E+15,
+            6.32E+15,
+            6.37E+15,
+            6.37E+15,
+            6.42E+15,
+            6.42E+15,
+            6.81E+15,
+            6.81E+15,
+            7.09E+15,
+            7.09E+15
         ]
 
     def _add_cur_data(self, cur_data, label):
