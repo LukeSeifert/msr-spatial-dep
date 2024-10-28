@@ -108,11 +108,12 @@ class PlotterCollection:
         return
     
     def _time_plot_helper(self, data_dict, nuclide_i, ending,
-                          spatial_eval_node):
+                          spatial_eval_node, num_plot):
         plt.xlabel(data_dict['xlab'])
         plt.ylabel(data_dict['ylab'])
         plt.yscale(self.yscale)
-        plt.legend()
+        if num_plot > 1:
+            plt.legend()
         try:
             plot_main_name = f'{self.imdir}{data_dict['savename']}'
             plt.savefig(f'{plot_main_name}_{nuclide_i}_{ending}.png')
@@ -127,6 +128,7 @@ class PlotterCollection:
                         print_data=False):
         initial_data = True
         if type(spatial_eval_node) == type(None):
+            num_plot = 0
             for i, x in enumerate(data_dict['xs']):
                 try:
                     lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
@@ -142,6 +144,7 @@ class PlotterCollection:
                     continue
                 ending = ending
                 plt.plot(x, y, label=lab)
+                num_plot += 1
                 if print_data:
                     with open('data.txt', 'a') as f:
                         f.write(f'{lab = }\n')
@@ -157,7 +160,8 @@ class PlotterCollection:
                 if print_diffs:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
             self._time_plot_helper(data_dict, nuclide_i, ending,
-                                    spatial_eval_node)
+                                    spatial_eval_node, num_plot)
+            num_plot = 0
             if pcnt_diff_bool and not initial_data:
                 for i, x in enumerate(data_dict['xs']):
                     if i == 0:
@@ -166,16 +170,21 @@ class PlotterCollection:
                     y = data_dict[f'{data_str}_avg_y_method{i}_nuc{nuclide_i}']
                     pcnt_diffs = ((base_y - y) / (base_y) * 100)
                     pcnt_diffs[np.isnan(pcnt_diffs)] = 0
+                    print(f'Peak Diff: {max(np.abs(pcnt_diffs)) = }')
+                    print(f'Final Diff: {pcnt_diffs[-1] = }')
                     plt.plot(x, pcnt_diffs, label=lab)
+                    num_plot += 1
                 plt.xlabel(data_dict['xlab'])
                 plt.ylabel('Percent Difference [%]')
                 plt.yscale(self.yscale)
-                plt.legend()
+                if num_plot > 1:
+                    plt.legend()
                 plot_main_name = f'{self.imdir}{data_dict['savename']}'
                 plt.savefig(f'{plot_main_name}_{nuclide_i}_pcntdiff.png')
                 plt.close()
 
         else:
+            num_plot = 0
             for i, x in enumerate(data_dict['xs']):
                 if type(spatial_eval_node) != type(None):
                     try:
@@ -185,8 +194,9 @@ class PlotterCollection:
                         continue
                     ending = f'spat{spatial_eval_node}'
                     plt.plot(x, y, label=lab)
+                    num_plot += 1
             self._time_plot_helper(data_dict, nuclide_i, ending,
-                                spatial_eval_node)
+                                spatial_eval_node, num_plot)
         return
 
 
