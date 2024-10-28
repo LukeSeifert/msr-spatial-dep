@@ -150,11 +150,11 @@ class DiffEqSolvers:
             newts = [0.0, 0.4166667, 1.0, 1.5, 2.0, 3.166667, 77.0, 80.0, 81.0, 82.25, 84.0, 86.0, 87.0, 87.5, 88.0, 88.5, 91.0, 95.0, 105.0, 108.0, 108.5, 112.0, 113.75, 115.0, 116.75, 122.5, 140.0, 141.0, 141.5, 153.5, 157.75, 163.5, 170.5, 171.5, 174.0, 262.3333, 265.0, 265.25, 280.0, 287.8333, 292.8333, 293.8333, 295.0, 296.25, 297.25, 324.9167, 338.5]
             msre_times = np.asarray(newts) * 24 * 3600
             msre_rel_powers = [0.03406, 0.0, 0.0681199, 0.0, 0.1362398, 0.0, 0.1362398, 0.0, 0.3405995, 0.0, 0.3405995, 0.0, 0.681199, 0.0, 0.681199, 0.0, 0.681199, 0.0, 0.722071, 0.0, 0.8855586, 0.0, 0.681199, 0.0, 0.9019073, 0.0, 1.0, 0.0, 0.9888076, 0.0, 1.0, 1.0, 0.0, 0.762943, 0.0, 0.7259027, 0.0, 0.8174387, 0.0, 0.9224797, 0.0, 1.0, 0.0, 1.0, 0.0, 0.8855586, 1.0]
-            power_vals = _time_sorter(msre_times, msre_rel_powers, times)
+            power_vals = np.asarray(_time_sorter(msre_times, msre_rel_powers, times))
 
-        plt.step(times/(24*3600), power_vals, where='post')
+        plt.step(times/(24*3600), power_vals/1e6, where='post')
         plt.xlabel('Time [d]')
-        plt.ylabel('Power [W]')
+        plt.ylabel('Power [MW]')
         plt.savefig('images/power_hist.png')
         plt.close()
 
@@ -248,7 +248,10 @@ class DiffEqSolvers:
                                      self.lams[loss_nuc])
                 except KeyError:
                     continue
-            incore_source = fission_source + decay_source
+            scaling_factor = 1
+            if self.run_params['solver_method'] == 'ODE' and self.run_params['scaled_flux']:
+                scaling_factor = self.run_params['frac_in']
+            incore_source = fission_source * scaling_factor + decay_source
             excore_source = decay_source
             cur_source = self._format_spatial(incore_source, excore_source)
             self.S[gain_nuc] = cur_source
@@ -265,12 +268,21 @@ class DiffEqSolvers:
 
         """
         for nuclide in range(self.num_nucs):
-            incore_losses = (self.lams[nuclide] + 
-                             self.power[ti]/self.p0 * self.loss_rates[nuclide])
-            excore_losses = self.lams[nuclide] + self.reprs[nuclide]
-            cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
+            scaling_factor = 1
+            if self.run_params['solver_method'] == 'ODE':
+                if self.run_params['scaled_flux']:
+                    scaling_factor = self.run_params['frac_in']
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor + self.reprs[nuclide] * (1 - scaling_factor)
+                else:
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] + self.reprs[nuclide]
+                cur_nuc_losses = self._format_spatial(losses, losses)
+            else:
+                incore_losses = (self.lams[nuclide] + 
+                                self.power[ti]/self.p0 * self.loss_rates[nuclide])
+                excore_losses = self.lams[nuclide] + self.reprs[nuclide]
+                cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
-        return
+        return 
 
     def _update_result_mat(self, result_mat, time_index):
         """
@@ -314,7 +326,13 @@ class DiffEqSolvers:
         #print(self.mu[nuclide_index][0])
         #print(self.mu[nuclide_index][-1])
         #input()
-        conc = ((conc + self.S[nuclide_index][0] * self.dt) / (1 + self.mu[nuclide_index][0] * self.dt))
+        if self.run_params['scaled_flux']:
+            loss = np.mean(self.mu[nuclide_index])
+        else:
+            loss = self.mu[nuclide_index][0] + self.reprs[nuclide_index]
+
+        source = self.S[nuclide_index][0]
+        conc = ((conc + source * self.dt) / (1 + loss * self.dt))
 
 
         return conc
@@ -368,6 +386,9 @@ class DiffEqSolvers:
         """
         self._initialize_concs()
         ODE_result_mat = self._initialize_result_mat()
+        self.scaling_factor = 1
+        if self.run_params['scaled_flux']:
+            self.scaling_factor = self.run_params['frac_in']
         for ti, t in enumerate(self.times[1:]):
             self._update_sources(ti)
             self._update_losses(ti)
