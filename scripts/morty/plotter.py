@@ -69,8 +69,8 @@ class PlotterCollection:
         hour = 60 * minute
         day = 24 * hour
         year = 365.25 * day
-        time_list = [year, day, hour, minute, second, millisecond]
-        label_list = ['yr', 'd', 'hr', 'min', 's', 'ms']
+        time_list = [day, hour, minute, second, millisecond]
+        label_list = ['d', 'hr', 'min', 's', 'ms']
         for ti, time in enumerate(time_list):
             if time > tf:
                 continue
