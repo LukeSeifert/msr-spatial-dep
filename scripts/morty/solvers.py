@@ -495,8 +495,8 @@ class DiffEqSolvers:
             6.79780E-01,
             6.79780E-01
             ]
-            power_vals = np.asarray(_time_sorter(msre_times, msre_rel_powers, times))
-
+            power_vals = _time_sorter(msre_times, msre_rel_powers, times)
+        power_vals = np.asarray(power_vals)
         plt.step(times/(24*3600), power_vals/1e6, where='post')
         plt.xlabel('Time [d]')
         plt.ylabel('Power [MW]')
