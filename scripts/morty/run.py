@@ -38,7 +38,7 @@ if __name__ == '__main__':
     plotting_params['gif'] = False
     plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
-    plotting_params['msre'] = True
+    plotting_params['msre'] = False
 
     analysis_params = {}
     analysis_params['test_run'] = True
@@ -54,25 +54,27 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Nb' #'Nb'
-    run_params['target_isobar'] = '95' #'95'
-    run_params['spacenodes'] = 2
-    run_params['num_nuclides'] = 9
-    run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
-    run_params['solver_method'] = 'ODE'
+    run_params['target_element'] = 'Sb' #'Nb'
+    run_params['target_isobar'] = '135' #'95'
+    run_params['spacenodes'] = 200
+    run_params['num_nuclides'] = 2
+    run_params['data_gen_option'] = 'openmc'
+    run_params['final_time'] = 3600 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
     run_params['CFL_cond'] = 0.9
     #run_params['num_times'] = int(5e5)
     run_params['p0'] = 7.34e6 #8e6
-    run_params['power_version'] = 'msre'
+    run_params['power_version'] = 'constant'
     run_params['fissile_atom_dens_cc'] = 8.41e19
     run_params['reprocessing'] = {'Xe': 1/20*0,
                                   'I' : 1/20*0,
                                   'Te': 1/20*0,
                                   'Sb': 1/20*0,
-                                  'Nb': 2.3e-8}
+                                  'Nb': 2.3e-8*0,
+                                  'Tc': 1.61e-3*0,
+                                  'Mo': 2.19e-7*0}
 
     # https://www.osti.gov/servlets/purl/1488384
     run_params['residence_time'] = 8 # s
