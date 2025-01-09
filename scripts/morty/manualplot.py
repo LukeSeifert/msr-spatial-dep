@@ -23,9 +23,11 @@ class PlotHolder:
         #self._setup_print()
         nucs = self.data[self.adder].keys()
         colors = ['blue', 'orange', 'green', 'cyan', 'olive', 'pink']
+        lines = ['--', '-.']
         for nuc in nucs:
             other_count = 0
             for version in self.data.keys():
+                version_label = version
                 if version == self.msre:
                     marker = '.'
                     linestyle = ''
@@ -35,13 +37,17 @@ class PlotHolder:
                     linestyle = ''
                     color = 'red'
                 else:
+                    if version == 'ODE':
+                        version_label = 'Scaled Flux'
+                    elif version == 'PDE':
+                        version_label = 'Spatially Resolved'
                     marker = ''
-                    linestyle = '--'
+                    linestyle = lines[other_count%len(lines)]
                     color = colors[other_count%len(colors)]
                     other_count += 1
                 try:
                     plt.plot((np.asarray(self.times[version])/(24*3600)),
-                            self.data[version][nuc], label=version,
+                            self.data[version][nuc], label=version_label,
                             linestyle=linestyle, marker=marker, color=color,
                             markersize=5)
                 except KeyError:

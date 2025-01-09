@@ -108,10 +108,14 @@ class PlotterCollection:
         return
     
     def _time_plot_helper(self, data_dict, nuclide_i, ending,
-                          spatial_eval_node, num_plot):
+                          spatial_eval_node, num_plot, manual_y_lab=False):
         plt.xlabel(data_dict['xlab'])
-        plt.ylabel(data_dict['ylab'])
         plt.yscale(self.yscale)
+        if not manual_y_lab:
+            plt.ylabel(data_dict['ylab'])
+        else:
+            plt.yscale('log')
+            plt.ylabel(manual_y_lab, fontsize=14)
         if num_plot > 1:
             plt.legend()
         try:
@@ -159,8 +163,12 @@ class PlotterCollection:
                     print(f'% diff {data_str} {lab}-{base_lab}: {pcnt_diff:.3E}%')
                 if print_diffs:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
+            manual_y_lab = False
+            if data_str == 'gradient':
+                manual_y_lab = r'|$\nabla$N|/N [1/cm]'
             self._time_plot_helper(data_dict, nuclide_i, ending,
-                                    spatial_eval_node, num_plot)
+                                    spatial_eval_node, num_plot,
+                                    manual_y_lab=manual_y_lab)
             num_plot = 0
             if pcnt_diff_bool and not initial_data:
                 for i, x in enumerate(data_dict['xs']):
@@ -228,6 +236,9 @@ class PlotterCollection:
                                     'in', nuclide_i, print_diffs)
                 self._data_collector(data_dict, 'ex', None,
                                     'ex', nuclide_i, print_diffs)
+                self._data_collector(data_dict, 'gradient', None,
+                                    'gradient', nuclide_i, print_diffs=False)
+
             if type(spatial_eval_node) != type(None):
                 self._data_collector(data_dict, None, spatial_eval_node,
                                     None, nuclide_i, print_diffs)

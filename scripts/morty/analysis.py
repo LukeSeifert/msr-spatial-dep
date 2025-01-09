@@ -159,12 +159,20 @@ class AnalysisCollection:
                     y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
                     y2 = np.mean(self.data['ys'][i][:, :split_index, nuclide_i], axis=1)
                     y3 = np.mean(self.data['ys'][i][:, split_index:, nuclide_i], axis=1)
+                    y4 = np.max(np.abs(np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)), axis=1) / self.run_params['dz'] / y
+                    #differences = np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                    #max_diff = np.max(differences, axis=1)
+                    #min_diff = np.min(differences, axis=1)
+                    #y4 = np.where(np.abs(max_diff) >= np.abs(min_diff), max_diff, min_diff) / self.run_params['dz']
+
+
                 except IndexError:
                     continue
                 lab = f'{self.data["labs"][i]} {nuclide}'
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
                 self.data[f'in_avg_y_method{i}_nuc{nuclide_i}'] = y2
                 self.data[f'ex_avg_y_method{i}_nuc{nuclide_i}'] = y3
+                self.data[f'gradient_avg_y_method{i}_nuc{nuclide_i}'] = y4
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
                 final_names.append(lab)
