@@ -115,7 +115,8 @@ class PlotterCollection:
             plt.ylabel(data_dict['ylab'])
         else:
             plt.yscale('log')
-            plt.ylabel(manual_y_lab, fontsize=14)
+            #plt.ylabel(manual_y_lab, fontsize=14)
+            plt.ylabel(manual_y_lab)
         if num_plot > 1:
             plt.legend()
         try:
@@ -165,7 +166,9 @@ class PlotterCollection:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
             manual_y_lab = False
             if data_str == 'gradient':
-                manual_y_lab = r'|$\nabla$N|/N [1/cm]'
+                manual_y_lab = r'(N$_{max}$ - N$_{min}$)/N$_{avg}$'
+            elif data_str == 'std':
+                manual_y_lab = r'Standard Deviation'
             self._time_plot_helper(data_dict, nuclide_i, ending,
                                     spatial_eval_node, num_plot,
                                     manual_y_lab=manual_y_lab)
@@ -238,6 +241,8 @@ class PlotterCollection:
                                     'ex', nuclide_i, print_diffs)
                 self._data_collector(data_dict, 'gradient', None,
                                     'gradient', nuclide_i, print_diffs=False)
+                self._data_collector(data_dict, 'std', None,
+                                    'std', nuclide_i, print_diffs=False)
 
             if type(spatial_eval_node) != type(None):
                 self._data_collector(data_dict, None, spatial_eval_node,

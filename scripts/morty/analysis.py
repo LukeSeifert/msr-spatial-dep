@@ -159,7 +159,15 @@ class AnalysisCollection:
                     y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
                     y2 = np.mean(self.data['ys'][i][:, :split_index, nuclide_i], axis=1)
                     y3 = np.mean(self.data['ys'][i][:, split_index:, nuclide_i], axis=1)
-                    y4 = np.max(np.abs(np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)), axis=1) / self.run_params['dz'] / y
+                    #y4 = np.max(np.abs(np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)), axis=1) / self.run_params['dz'] / y
+                    #min_pos = np.argmin(self.data['ys'][i][:, :, nuclide_i], axis=1) * self.run_params['dz']
+                    #max_pos = np.argmax(self.data['ys'][i][:, :, nuclide_i], axis=1) * self.run_params['dz']
+                    y4 = (np.max(self.data['ys'][i][:, :, nuclide_i], axis=1) - np.min(self.data['ys'][i][:, :, nuclide_i], axis=1)) / y #/ abs(max_pos - min_pos)
+                    #y4 =  (np.max(self.data['ys'][i][:, :, nuclide_i], axis=1) - np.min(self.data['ys'][i][:, :, nuclide_i], axis=1))/ self.run_params['net_length']
+                    y5 = np.std(self.data['ys'][i][:, :, nuclide_i], axis=1) / y
+
+
+
                     #differences = np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)
                     #max_diff = np.max(differences, axis=1)
                     #min_diff = np.min(differences, axis=1)
@@ -173,6 +181,7 @@ class AnalysisCollection:
                 self.data[f'in_avg_y_method{i}_nuc{nuclide_i}'] = y2
                 self.data[f'ex_avg_y_method{i}_nuc{nuclide_i}'] = y3
                 self.data[f'gradient_avg_y_method{i}_nuc{nuclide_i}'] = y4
+                self.data[f'std_avg_y_method{i}_nuc{nuclide_i}'] = y5
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
                 final_names.append(lab)
