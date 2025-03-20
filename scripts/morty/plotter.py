@@ -6,6 +6,8 @@ from time import time
 import pandas as pd
 from analysis import AnalysisCollection
 from manualplot import PlotHolder
+import seaborn as sns
+import matplotlib.ticker as ticker
 
 class PlotterCollection:
     def __init__(self, plotting_params, run_params, data_params):
@@ -108,7 +110,8 @@ class PlotterCollection:
         return
     
     def _time_plot_helper(self, data_dict, nuclide_i, ending,
-                          spatial_eval_node, num_plot, manual_y_lab=False):
+                          spatial_eval_node, num_plot, manual_y_lab=False,
+                          legend=True):
         plt.xlabel(data_dict['xlab'])
         plt.yscale(self.yscale)
         if not manual_y_lab:
@@ -117,7 +120,7 @@ class PlotterCollection:
             plt.yscale('log')
             #plt.ylabel(manual_y_lab, fontsize=14)
             plt.ylabel(manual_y_lab)
-        if num_plot > 1:
+        if num_plot > 1 and legend:
             plt.legend()
         try:
             plot_main_name = f'{self.imdir}{data_dict['savename']}'
@@ -171,7 +174,8 @@ class PlotterCollection:
                 manual_y_lab = r'Standard Deviation'
             self._time_plot_helper(data_dict, nuclide_i, ending,
                                     spatial_eval_node, num_plot,
-                                    manual_y_lab=manual_y_lab)
+                                    manual_y_lab=manual_y_lab,
+                                    legend=False)
             num_plot = 0
             if pcnt_diff_bool and not initial_data:
                 for i, x in enumerate(data_dict['xs']):
@@ -273,10 +277,86 @@ class PlotterCollection:
                         color='black')
             plt.ylabel('Concentration [at/cc]')
             plt.ylim((min_conc, max_conc))
-            plt.yscale(self.yscale)
-            
-
+            plt.yscale(self.yscale) 
             plt.savefig(f'{self.imdir}final_time_{nuclide_i}.png')
+            plt.close()
+
+        i = data_dict['labs'].index('PDE')
+        for nuclide_i in range(num_nucs):
+            try:
+                x = data_dict['xs'][0]
+                y = self.run_params['positions']
+            except (KeyError, IndexError):
+                continue
+            #X, Y = np.meshgrid(y, x)
+            #Z = z
+            data = dict()
+            x_name = r'Time $[s]$'
+            y_name = r'Length $[cm]$'
+            z_name = r'Concentration $[atoms/cm^3]$'
+            
+            
+            data[x_name] = list()
+            data[y_name] = list()
+            data[z_name] = list()
+            for xi, xval in enumerate(x):
+                for yi, yval in enumerate(y):
+                    data[x_name].append(xval)
+                    data[y_name].append(yval)
+                    data[z_name].append(np.random.randint(1, 10))
+                    #data[z_name].append(data_dict['ys'][i][xi, yi, nuclide_i])
+
+
+            df = pd.DataFrame.from_dict(data)
+            # Max time 30.1 seconds, max space 608.1 cm
+            #df.columns = [x_name,y_name,z_name]
+            #df[z_name] = pd.to_numeric(df[z_name])
+            pivotted = df.pivot(columns=x_name,index=y_name,values=z_name)
+            color = sns.color_palette("magma", as_cmap=True)
+
+            yticks = np.linspace(0, len(y)-1, 10, dtype=int)
+            xticks = np.linspace(0, len(x)-1, 10, dtype=int)
+            yticklabels = [y[idx] for idx in yticks]
+            xticklabels = [x[idx] for idx in xticks]
+
+
+            ax = sns.heatmap(pivotted, cmap=color,
+                             xticklabels=xticklabels,
+                             yticklabels=yticklabels)
+            #num_ticks = len(x)
+            ax.set_xticks(xticks)
+            ax.set_yticks(yticks)
+            #xindeces = np.round(np.linspace(0, len(x) - 1, num_ticks)).astype(int)
+            ax.set_xticklabels(xticklabels)
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.0f'))
+            ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.0f'))
+            #ax.xaxis.set_major_locator(ticker.LinearLocator(10))
+            #ax.yaxis.set_major_locator(ticker.LinearLocator(10))
+            ax.invert_yaxis()
+            ax.collections[0].colorbar.set_label(z_name)
+            plt.tight_layout()
+            
+            # Plot the surface.
+            #from matplotlib import cm
+            #fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+            #surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+            #                    linewidth=0, antialiased=False)
+
+            # Customize the z axis.
+            #ax.set_zlim(-1.01, 1.01)
+            #ax.zaxis.set_major_locator(LinearLocator(10))
+            # A StrMethodFormatter is used automatically
+            #ax.zaxis.set_major_formatter('{x:.02f}')
+
+            # Add a color bar which maps values to colors.
+            #fig.colorbar(surf, shrink=0.5, aspect=5)
+            #ax.set_xlabel(r'Length $[cm]$')
+            #ax.set_ylabel(r'Time $[s]$')
+            #ax.set_zlabel(r'Concentration $[atoms/cm^3]$')
+
+            #plt.show()
+            #plt.yscale(self.yscale) 
+            plt.savefig(f'{self.imdir}surf_{nuclide_i}.png')
             plt.close()
         return
 
