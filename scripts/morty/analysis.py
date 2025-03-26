@@ -2,7 +2,7 @@ import solvers
 import numpy as np
 from data import DataHandler
 from scipy import integrate
-
+import re
 
 class AnalysisCollection:
     def __init__(self, analysis_params, run_params, data_params):
@@ -151,6 +151,7 @@ class AnalysisCollection:
 
         num_nucs = max(num_nucs)
         for nuclide_i in range(num_nucs):
+            print(nuclide_i)
             final_data_points = []
             final_names = []
             for i, x in enumerate(self.data['xs']):
@@ -159,13 +160,12 @@ class AnalysisCollection:
                     y = np.mean(self.data['ys'][i][:, :, nuclide_i], axis=1)
                     y2 = np.mean(self.data['ys'][i][:, :split_index, nuclide_i], axis=1)
                     y3 = np.mean(self.data['ys'][i][:, split_index:, nuclide_i], axis=1)
-                    #y4 = np.max(np.abs(np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)), axis=1) / self.run_params['dz'] / y
-                    #min_pos = np.argmin(self.data['ys'][i][:, :, nuclide_i], axis=1) * self.run_params['dz']
-                    #max_pos = np.argmax(self.data['ys'][i][:, :, nuclide_i], axis=1) * self.run_params['dz']
-                    y4 = (np.max(self.data['ys'][i][:, :, nuclide_i], axis=1) - np.min(self.data['ys'][i][:, :, nuclide_i], axis=1)) / y #/ abs(max_pos - min_pos)
-                    #y4 =  (np.max(self.data['ys'][i][:, :, nuclide_i], axis=1) - np.min(self.data['ys'][i][:, :, nuclide_i], axis=1))/ self.run_params['net_length']
+                    # r'(N$_{max}$ - N$_{min}$)/N$_{avg}$'
+                    #y4 = (np.max(self.data['ys'][i][:, :, nuclide_i], axis=1) - np.min(self.data['ys'][i][:, :, nuclide_i], axis=1)) / y #/ abs(max_pos - min_pos)
                     y5 = np.std(self.data['ys'][i][:, :, nuclide_i], axis=1) / y
-
+                    y6 = np.max(self.data['ys'][i][:, :, nuclide_i], axis=1)
+                    # Relative Gradient
+                    y4 = np.max(np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)) / y6 # Relative gradient
 
 
                     #differences = np.diff(self.data['ys'][i][:, :, nuclide_i], axis=1)
@@ -176,12 +176,19 @@ class AnalysisCollection:
 
                 except IndexError:
                     continue
-                lab = f'{self.data["labs"][i]} {nuclide}'
+                nuclide_split_name = re.split('(\\d+)', nuclide)
+                if nuclide_split_name[2] != '_m':
+                    nuclide_texname = fr'$^{{{nuclide_split_name[1]}}}${nuclide_split_name[0]}'
+                else:
+                    nuclide_texname = fr'$^{{{nuclide_split_name[1]}m}}${nuclide_split_name[0]}'
+
+                lab = f'{self.data["labs"][i]} {nuclide_texname}'
                 self.data[f'spat_avg_y_method{i}_nuc{nuclide_i}'] = y
                 self.data[f'in_avg_y_method{i}_nuc{nuclide_i}'] = y2
                 self.data[f'ex_avg_y_method{i}_nuc{nuclide_i}'] = y3
                 self.data[f'gradient_avg_y_method{i}_nuc{nuclide_i}'] = y4
                 self.data[f'std_avg_y_method{i}_nuc{nuclide_i}'] = y5
+                self.data[f'max_avg_y_method{i}_nuc{nuclide_i}'] = y6
                 self.data[f'lab_method{i}_nuc{nuclide_i}'] = lab
                 final_data_points.append(y[-1])
                 final_names.append(lab)

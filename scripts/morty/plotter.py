@@ -8,6 +8,7 @@ from analysis import AnalysisCollection
 from manualplot import PlotHolder
 import seaborn as sns
 import matplotlib.ticker as ticker
+from matplotlib.colors import LogNorm
 
 class PlotterCollection:
     def __init__(self, plotting_params, run_params, data_params):
@@ -135,8 +136,8 @@ class PlotterCollection:
                         ending, nuclide_i, print_diffs, pcnt_diff_bool=False,
                         print_data=False):
         initial_data = True
+        num_plot = 0
         if type(spatial_eval_node) == type(None):
-            num_plot = 0
             for i, x in enumerate(data_dict['xs']):
                 try:
                     lab = data_dict[f'lab_method{i}_nuc{nuclide_i}']
@@ -168,15 +169,18 @@ class PlotterCollection:
                 if print_diffs:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
             manual_y_lab = False
+            legend_opt = True
             if data_str == 'gradient':
-                manual_y_lab = r'(N$_{max}$ - N$_{min}$)/N$_{avg}$'
+                #manual_y_lab = r'(N$_{max}$ - N$_{min}$)/N$_{avg}$'
+                manual_y_lab = r'Relative Gradient'
+                legend_opt = False
             elif data_str == 'std':
                 manual_y_lab = r'Standard Deviation'
+                legend_opt = False
             self._time_plot_helper(data_dict, nuclide_i, ending,
                                     spatial_eval_node, num_plot,
                                     manual_y_lab=manual_y_lab,
-                                    legend=False)
-            num_plot = 0
+                                    legend=legend_opt)
             if pcnt_diff_bool and not initial_data:
                 for i, x in enumerate(data_dict['xs']):
                     if i == 0:
@@ -192,14 +196,13 @@ class PlotterCollection:
                 plt.xlabel(data_dict['xlab'])
                 plt.ylabel('Percent Difference [%]')
                 plt.yscale(self.yscale)
-                if num_plot > 1:
+                if num_plot > 1 and legend_opt:
                     plt.legend()
                 plot_main_name = f'{self.imdir}{data_dict['savename']}'
                 plt.savefig(f'{plot_main_name}_{nuclide_i}_pcntdiff.png')
                 plt.close()
 
         else:
-            num_plot = 0
             for i, x in enumerate(data_dict['xs']):
                 if type(spatial_eval_node) != type(None):
                     try:
@@ -247,20 +250,28 @@ class PlotterCollection:
                                     'gradient', nuclide_i, print_diffs=False)
                 self._data_collector(data_dict, 'std', None,
                                     'std', nuclide_i, print_diffs=False)
+                self._data_collector(data_dict, 'max', None,
+                                    'max', nuclide_i, print_diffs=False)
 
             if type(spatial_eval_node) != type(None):
                 self._data_collector(data_dict, None, spatial_eval_node,
                                     None, nuclide_i, print_diffs)
         return
     
-    def plot_space(self, data_dict):
+    def plot_space(self, data_dict, surf=True):
         num_nucs = []
         for i, x in enumerate(data_dict['xs']):
             num_nucs.append(np.shape(data_dict['ys'][i])[2])
         num_nucs = max(num_nucs)
 
         for nuclide_i in range(num_nucs):
+            max_concs = list()
+            min_concs = list()
             for i, x in enumerate(data_dict['xs']):
+                cur_max_conc = np.max(data_dict['ys'][i][-1, :, nuclide_i])
+                cur_min_conc = np.min(data_dict['ys'][i][-1, :, nuclide_i])
+                max_concs.append(cur_max_conc)
+                min_concs.append(cur_min_conc)
                 try:
                     y = data_dict['ys'][i][-1, :, nuclide_i]
                 except (KeyError, IndexError):
@@ -270,62 +281,70 @@ class PlotterCollection:
                 plt.plot(self.run_params['positions'], y, label=lab,
                         marker='.')
             plt.legend()
+            max_conc = np.max(max_concs)
+            min_conc = np.min(min_concs)
             plt.xlabel('Space [cm]')
-            max_conc = np.max(data_dict['ys'][i][-1, :, nuclide_i])
-            min_conc = np.min(data_dict['ys'][i][-1, :, nuclide_i])
-            plt.vlines(self.run_params['core_outlet'], 0, 1e1 * max_conc,
+            plt.vlines(self.run_params['core_outlet'], 0, max_conc*1.1,
                         color='black')
             plt.ylabel('Concentration [at/cc]')
-            plt.ylim((min_conc, max_conc))
+            plt.ylim((min_conc*0.9, max_conc*1.1))
             plt.yscale(self.yscale) 
             plt.savefig(f'{self.imdir}final_time_{nuclide_i}.png')
             plt.close()
 
-        i = data_dict['labs'].index('PDE')
-        for nuclide_i in range(num_nucs):
-            try:
-                x = data_dict['xs'][0]
-                y = self.run_params['positions']
-            except (KeyError, IndexError):
-                continue
-            data = dict()
-            x_name = r'Time $[s]$'
-            y_name = r'Length $[cm]$'
-            z_name = r'Concentration $[atoms/cm^3]$'
-            
-            
-            data[x_name] = list()
-            data[y_name] = list()
-            data[z_name] = list()
-            for xi, xval in enumerate(x):
-                for yi, yval in enumerate(y):
-                    data[x_name].append(xval)
-                    data[y_name].append(yval)
-                    data[z_name].append(data_dict['ys'][i][xi, yi, nuclide_i])
+        if surf:
+            i = data_dict['labs'].index('PDE')
+            for nuclide_i in range(num_nucs):
+                try:
+                    x = data_dict['xs'][0]
+                    y = self.run_params['positions']
+                except (KeyError, IndexError):
+                    continue
+                data = dict()
+                #x_name = r'Time $[s]$'
+                x_name = data_dict['xlab']
+                y_name = r'Length [cm]'
+                z_name = r'Relative Concentration'
+                
+                
+                data[x_name] = list()
+                data[y_name] = list()
+                data[z_name] = list()
+                for xi, xval in enumerate(x):
+                    for yi, yval in enumerate(y):
+                        data[x_name].append(xval)
+                        data[y_name].append(yval)
+                        conc_at_point = data_dict['ys'][i][xi, yi, nuclide_i]
+                        max_conc_at_time = np.max(data_dict['ys'][i][xi, :, nuclide_i])
+                        data[z_name].append(conc_at_point / max_conc_at_time)
 
 
-            df = pd.DataFrame.from_dict(data)
-            pivotted = df.pivot(columns=x_name,index=y_name,values=z_name)
-            color = sns.color_palette("magma", as_cmap=True)
+                df = pd.DataFrame.from_dict(data)
+                pivotted = df.pivot(columns=x_name,index=y_name,values=z_name)
+                color = sns.color_palette("magma", as_cmap=True)
 
-            yticks = np.linspace(0, len(y)-1, 10, dtype=int)
-            xticks = np.linspace(0, len(x)-1, 10, dtype=int)
-            yticklabels = [f'{y[idx]:.0f}' for idx in yticks]
-            xticklabels = [f'{x[idx]:.0f}' for idx in xticks]
+                yticks = np.linspace(0, len(y)-1, 10, dtype=int)
+                xticks = np.linspace(0, len(x)-1, 10, dtype=int)
+                yticklabels = [f'{y[idx]:.0f}' for idx in yticks]
+                xticklabels = [f'{x[idx]:.0f}' for idx in xticks]
 
 
-            ax = sns.heatmap(pivotted, cmap=color,
-                             xticklabels=xticklabels,
-                             yticklabels=yticklabels)
-            ax.set_xticks(xticks)
-            ax.set_yticks(yticks)
-            ax.set_xticklabels(xticklabels)
-            ax.set_yticklabels(yticklabels)
-            ax.invert_yaxis()
-            plt.tight_layout()
-            
-            plt.savefig(f'{self.imdir}surf_{nuclide_i}.png')
-            plt.close()
+                ax = sns.heatmap(pivotted, cmap=color,
+                                xticklabels=xticklabels,
+                                yticklabels=yticklabels,
+                                norm='linear')
+                                #norm=LogNorm(vmin=1e8, vmax=1e14))
+                                #vmin=1e8,
+                                #vmax=1e14)
+                ax.set_xticks(xticks)
+                ax.set_yticks(yticks)
+                ax.set_xticklabels(xticklabels)
+                ax.set_yticklabels(yticklabels)
+                ax.invert_yaxis()
+                plt.tight_layout()
+                
+                plt.savefig(f'{self.imdir}surf_{nuclide_i}.png')
+                plt.close()
         return
 
     
@@ -396,7 +415,8 @@ class PlotterCollection:
         return
     
     def plot_gen(self, data_dict, spatial_eval_positions=[],
-                 time_eval_positions=[]):
+                 time_eval_positions=[],
+                 surf_opt=True):
         """
         Generates various plots based on plotting parameters
 
@@ -418,7 +438,7 @@ class PlotterCollection:
         if self.plotting_params['msre']:
             self.plot_obj.plot_data(self.imdir)
         #self.write_csv(data_dict)
-        self.plot_space(data_dict)
+        self.plot_space(data_dict, surf=surf_opt)
         for pos in spatial_eval_positions:
             self.plot_time(data_dict, pos) 
         if self.plotting_params['gif']:
