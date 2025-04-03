@@ -1,6 +1,7 @@
 import numpy as np
 from time import time
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -83,6 +84,7 @@ class DiffEqSolvers:
 
         self.flow_vec = self._format_spatial(self.incore_flowrate,
                                              self.excore_flowrate)
+        self.base_flow = deepcopy(self.flow_vec)
 
         self.lams = data_params['lams']
         self.loss_rates = data_params['loss_rates']
@@ -609,6 +611,20 @@ class DiffEqSolvers:
 
 
 
+    def _set_flow(self, t: float) -> None:
+        """
+        Set the flow over space and time by modifying flow_vec
+
+        Parameters
+        ----------
+        t : float
+            time
+        """
+        if self.run_params['flow_version'] == 'constant':
+            self.flow_vec = self.base_flow
+        elif self.run_params['flow_version'] == 'expdec':
+            self.flow_vec = np.asarray(self.base_flow) * np.exp(-t)
+        return None
 
 
     def _update_sources(self, ti):
@@ -800,6 +816,7 @@ class DiffEqSolvers:
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
         for ti, t in enumerate(self.times[:-1]):
+            self._set_flow(t)
             self._update_sources(ti)
             self._update_losses(ti)
 

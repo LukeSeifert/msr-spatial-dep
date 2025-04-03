@@ -71,6 +71,7 @@ if __name__ == '__main__':
     #run_params['num_times'] = int(5e5)
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'sin'
+    run_params['flow_version'] = 'constant'
     run_params['fissile_atom_dens_cc'] = 8.41e19
     run_params['reprocessing'] = {'Xe': 1/20*0,
                                   'I' : 1/20*0,
@@ -100,6 +101,7 @@ if __name__ == '__main__':
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
     available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step']
+    available_flows = ['constant', 'expdec']
 
     allowed_params['temperature'] = available_temperatures
     allowed_params['neutron_energy'] = available_energies
@@ -107,6 +109,7 @@ if __name__ == '__main__':
     allowed_params['solver_method'] = available_methods
     allowed_params['power_version'] = available_versions
     allowed_params['flux_shape'] = available_flux_shapes
+    allowed_params['flow_version'] = available_flows
 
     check_data(run_params, allowed_params)
     data_params = data.DataHandler(run_params).data_params
