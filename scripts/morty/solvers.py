@@ -101,6 +101,7 @@ class DiffEqSolvers:
 
         self.S = {}
         self.run_params = run_params
+        self.fission_shape = self._incore_spatial_source()
 
         if run:
             start = time()
@@ -594,20 +595,23 @@ class DiffEqSolvers:
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
 
-    def _incore_spatial_source(self, incore_source: float = 0.0) -> list[float]:
+    def _incore_spatial_source(self) -> np.typing.NDArray[np.float64]:
         """
         Convert the source into a spatially resolved source term
         """
-        spatial_source: list = list()
+        source_shape: list = list()
         max_in_pos: float = self.run_params['frac_in'] * self.positions[-1]
+
         if self.run_params['flux_shape'] == 'flat':
-            return spatial_source
+            for i, pos in enumerate(self.positions):
+                source_shape.append(1)
+
         elif self.run_params['flux_shape'] == 'sin':
             for i, pos in enumerate(self.positions):
                 shape = np.sin(np.pi * pos / max_in_pos)
-                spatial_source.append(incore_source * shape)
+                source_shape.append(shape)
                 
-        return spatial_source
+        return np.asarray(source_shape)
 
 
 
@@ -638,7 +642,7 @@ class DiffEqSolvers:
 
         """
         for gain_nuc in range(self.num_nucs):
-            fission_source = self.power[ti]/self.p0 * self.FYs[gain_nuc]  # fiss/cc-s
+            fission_source = self.power[ti]/self.p0 * self.FYs[gain_nuc] * self.fission_shape # fiss/cc-s
             decay_source = np.zeros(len(self.concs[gain_nuc]))
             for loss_nuc in range(self.num_nucs):
                 try:
@@ -653,7 +657,6 @@ class DiffEqSolvers:
                 scaling_factor = self.run_params['frac_in']
             incore_source = fission_source * scaling_factor + decay_source
             excore_source = decay_source
-            incore_source = self._incore_spatial_source(incore_source)
             cur_source = self._format_spatial(incore_source, excore_source)
             self.S[gain_nuc] = cur_source
         return
