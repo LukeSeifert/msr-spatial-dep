@@ -82,6 +82,11 @@ class DiffEqSolvers:
         self.power = run_params['power_W']
         self.p0 = run_params['p0']
 
+        for xi, x in enumerate(self.positions):
+            if x > self.z_core_outlet:
+                self.transition_index = xi
+                break
+
         self.flow_vec = self._format_spatial(self.incore_flowrate,
                                              self.excore_flowrate)
         self.base_flow = deepcopy(self.flow_vec)
@@ -676,13 +681,13 @@ class DiffEqSolvers:
             if self.run_params['solver_method'] == 'ODE':
                 if self.run_params['scaled_flux']:
                     scaling_factor = self.run_params['frac_in']
-                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor + self.reprs[nuclide] * (1 - scaling_factor)
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (1 - scaling_factor)
                 else:
-                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] + self.reprs[nuclide]
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape + self.reprs[nuclide]
                 cur_nuc_losses = self._format_spatial(losses, losses)
             else:
                 incore_losses = (self.lams[nuclide] + 
-                                self.power[ti]/self.p0 * self.loss_rates[nuclide])
+                                self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape)
                 excore_losses = self.lams[nuclide] + self.reprs[nuclide]
                 cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
@@ -731,11 +736,14 @@ class DiffEqSolvers:
         #print(self.mu[nuclide_index][-1])
         #input()
         if self.run_params['scaled_flux']:
-            loss = np.mean(self.mu[nuclide_index])
+            loss = np.mean(self.mu[nuclide_index][0:self.transition_index])
+            source = self.S[nuclide_index][0]
         else:
             loss = self.mu[nuclide_index][0] + self.reprs[nuclide_index]
+            source = self.S[nuclide_index][0]
 
-        source = self.S[nuclide_index][0]
+        
+
         conc = ((conc + source * self.dt) / (1 + loss * self.dt))
 
 
