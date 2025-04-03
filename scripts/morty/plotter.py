@@ -138,6 +138,7 @@ class PlotterCollection:
                         print_data=False):
         initial_data = True
         num_plot = 0
+        legend_opt = True
         if type(spatial_eval_node) == type(None):
             for i, x in enumerate(data_dict['xs']):
                 try:
@@ -170,7 +171,6 @@ class PlotterCollection:
                 if print_diffs:
                     print(f'    Final val {lab}: {y[-1]:.3E}')
             manual_y_lab = False
-            legend_opt = True
             if data_str == 'gradient':
                 #manual_y_lab = r'(N$_{max}$ - N$_{min}$)/N$_{avg}$'
                 manual_y_lab = r'Relative Gradient'
@@ -193,6 +193,7 @@ class PlotterCollection:
                     pcnt_diffs[np.isnan(pcnt_diffs)] = 0
                     print(f'Peak Diff: {max(np.abs(pcnt_diffs)) = }')
                     print(f'Final Diff: {pcnt_diffs[-1] = }')
+                    legend_opt = False
                     plt.plot(x, pcnt_diffs, label=lab)
                     num_plot += 1
                 plt.xlabel(data_dict['xlab'])
