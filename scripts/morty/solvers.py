@@ -131,7 +131,7 @@ class DiffEqSolvers:
                 power_vals.append(p0)
         elif version == 'sin':
             for t in times:
-                power = p0/2 * (np.sin(np.pi * t / (1*60*60)) + 1)
+                power = p0/2 * (np.sin(np.pi * t / (10) + 3*np.pi/2) + 1)
                 power_vals.append(power)
         elif version == 'neg_exp':
             for t in times:
@@ -139,7 +139,8 @@ class DiffEqSolvers:
                 power_vals.append(power)
         elif version == 'step':
             pulse_times = [
-        0, 1.25*24*3600, 1.25*24*3600+10*60, 1.25*24*3600*1e6
+        #0, 1.25*24*3600, 1.25*24*3600+10*60, 1.25*24*3600*1e6
+        0, 3600, 3600+10*60, 3600*1e6
 ]
             pulse_rel_powers = [
           1,           1e-1,               1e-1
@@ -497,8 +498,20 @@ class DiffEqSolvers:
             ]
             power_vals = _time_sorter(msre_times, msre_rel_powers, times)
         power_vals = np.asarray(power_vals)
-        plt.step(times/(24*3600), power_vals/1e6, where='post')
-        plt.xlabel('Time [d]')
+        if times[-1] > 24*3600:
+            times = times/(24*3600)
+            xlab = '[d]'
+        elif times[-1] > 3600:
+            times = times/(3600)
+            xlab = '[h]'
+        elif times[-1] > 60:
+            times = times/(60)
+            xlab = '[m]'
+        else:
+            xlab = '[s]'
+
+        plt.step(times, power_vals/1e6, where='post')
+        plt.xlabel(f'Time {xlab}')
         plt.ylabel('Power [MW]')
         plt.savefig('images/power_hist.png')
         plt.close()
