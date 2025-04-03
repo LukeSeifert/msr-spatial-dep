@@ -62,14 +62,15 @@ if __name__ == '__main__':
     run_params['spacenodes'] = 500
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 50 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
+    run_params['flux_shape'] = 'flat'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
     run_params['CFL_cond'] = 0.9
     #run_params['num_times'] = int(5e5)
     run_params['p0'] = 7.34e6 #8e6
-    run_params['power_version'] = 'constant'
+    run_params['power_version'] = 'sin'
     run_params['fissile_atom_dens_cc'] = 8.41e19
     run_params['reprocessing'] = {'Xe': 1/20*0,
                                   'I' : 1/20*0,
@@ -80,11 +81,11 @@ if __name__ == '__main__':
                                   'Mo': 2.19e-7*0}
 
     # https://www.osti.gov/servlets/purl/1488384
-    run_params['residence_time'] = 8 # s
     #run_params['linear_flow_rate'] = 600 # cm/s
-    run_params['linear_flow_rate'] = 21.75 #21.75 # cm/s
+    run_params['linear_flow_rate'] = 10 #21.75 #21.75 # cm/s
     #run_params['net_length'] = run_params['residence_time'] * 600 #608.06 cm
-    run_params['net_length'] = 608.06
+    run_params['net_length'] = 100 #608.06
+    run_params['residence_time'] = run_params['net_length'] / run_params['linear_flow_rate'] # s
     #run_params['vol_flow_rate'] = 75708
     #run_params['fuel_fraction'] = 0.225
     #run_params['core_rad'] = 140.335 / 2
@@ -95,6 +96,7 @@ if __name__ == '__main__':
     allowed_params = {}
     available_temperatures = ['294K']
     available_energies = [0.0253, 500_000, 14_000_000]
+    available_flux_shapes = ['flat', 'sin']
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
     available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step']
@@ -104,6 +106,7 @@ if __name__ == '__main__':
     allowed_params['data_gen_option'] = available_data
     allowed_params['solver_method'] = available_methods
     allowed_params['power_version'] = available_versions
+    allowed_params['flux_shape'] = available_flux_shapes
 
     check_data(run_params, allowed_params)
     data_params = data.DataHandler(run_params).data_params

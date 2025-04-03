@@ -540,16 +540,23 @@ class DiffEqSolvers:
         """
         return_list = np.zeros(self.spacenodes)
         if np.size(term1) > 1:
-            vector_form = True
+            vector_form_1 = True
         else:
-            vector_form = False
+            vector_form_1 = False
+        if np.size(term2) > 1:
+            vector_form_2 = True
+        else:
+            vector_form_2 = False
 
         for zi, z in enumerate(self.positions):
-            if vector_form:
+            if vector_form_1:
                 incore_term = term1[zi]
-                excore_term = term2[zi]
             else:
                 incore_term = term1
+
+            if vector_form_2:
+                excore_term = term2[zi]
+            else:
                 excore_term = term2
 
             if z <= self.z_core_outlet:
@@ -585,6 +592,25 @@ class DiffEqSolvers:
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
 
+    def _incore_spatial_source(self, incore_source: float = 0.0) -> list[float]:
+        """
+        Convert the source into a spatially resolved source term
+        """
+        spatial_source: list = list()
+        max_in_pos: float = self.run_params['frac_in'] * self.positions[-1]
+        if self.run_params['flux_shape'] == 'flat':
+            return spatial_source
+        elif self.run_params['flux_shape'] == 'sin':
+            for i, pos in enumerate(self.positions):
+                shape = np.sin(np.pi * pos / max_in_pos)
+                spatial_source.append(incore_source * shape)
+                
+        return spatial_source
+
+
+
+
+
     def _update_sources(self, ti):
         """
         Update source terms based on concentrations
@@ -611,6 +637,7 @@ class DiffEqSolvers:
                 scaling_factor = self.run_params['frac_in']
             incore_source = fission_source * scaling_factor + decay_source
             excore_source = decay_source
+            incore_source = self._incore_spatial_source(incore_source)
             cur_source = self._format_spatial(incore_source, excore_source)
             self.S[gain_nuc] = cur_source
         return
