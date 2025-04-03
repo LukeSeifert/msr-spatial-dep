@@ -735,12 +735,8 @@ class DiffEqSolvers:
         #print(self.mu[nuclide_index][0])
         #print(self.mu[nuclide_index][-1])
         #input()
-        if self.run_params['scaled_flux']:
-            loss = np.mean(self.mu[nuclide_index][0:self.transition_index])
-            source = self.S[nuclide_index][0]
-        else:
-            loss = self.mu[nuclide_index][0] + self.reprs[nuclide_index]
-            source = self.S[nuclide_index][0]
+        loss = np.mean(self.mu[nuclide_index][0:self.transition_index])
+        source = np.mean(self.S[nuclide_index][0:self.transition_index])
 
         
 
