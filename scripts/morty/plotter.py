@@ -28,6 +28,7 @@ class PlotterCollection:
                 Name of variable
 
         """
+        plt.rcParams['agg.path.chunksize'] = 10000
         plt.rcParams["font.size"] = 16
         plt.rcParams["axes.labelsize"] = 20
         plt.rcParams["axes.labelweight"] = "bold"
@@ -124,7 +125,7 @@ class PlotterCollection:
         if num_plot > 1 and legend:
             plt.legend()
         try:
-            plot_main_name = f'{self.imdir}{data_dict['savename']}'
+            plot_main_name = f'{self.imdir}{data_dict["savename"]}'
             plt.savefig(f'{plot_main_name}_{nuclide_i}_{ending}.png')
         except UnboundLocalError:
             pos = spatial_eval_node
@@ -182,6 +183,7 @@ class PlotterCollection:
                                     manual_y_lab=manual_y_lab,
                                     legend=legend_opt)
             if pcnt_diff_bool and not initial_data:
+                legend_opt = False
                 for i, x in enumerate(data_dict['xs']):
                     if i == 0:
                         continue
@@ -198,7 +200,7 @@ class PlotterCollection:
                 plt.yscale(self.yscale)
                 if num_plot > 1 and legend_opt:
                     plt.legend()
-                plot_main_name = f'{self.imdir}{data_dict['savename']}'
+                plot_main_name = f'{self.imdir}{data_dict["savename"]}'
                 plt.savefig(f'{plot_main_name}_{nuclide_i}_pcntdiff.png')
                 plt.close()
 
@@ -388,8 +390,7 @@ class PlotterCollection:
 
                     ax.plot(self.run_params['positions'], y, label=lab,
                             marker='.')
-                    ax.set_title(f'Time: {round(frame*self.run_params["dt"],
-                                                4)} s')
+                    ax.set_title(f'Time: {round(frame*self.run_params["dt"], 4)} s')
                     plt.legend()
             
 

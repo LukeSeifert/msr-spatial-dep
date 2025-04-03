@@ -27,6 +27,7 @@ class PlotHolder:
         for nuc in nucs:
             other_count = 0
             for version in self.data.keys():
+                markersize = 5
                 version_label = version
                 if version == self.msre:
                     marker = '.'
@@ -37,11 +38,15 @@ class PlotHolder:
                     linestyle = ''
                     color = 'red'
                 else:
+                    marker = ''
                     if version == 'ODE':
                         version_label = 'Scaled Flux'
+                        marker = '^'
+                        markersize = 2
                     elif version == 'PDE':
                         version_label = 'Spatially Resolved'
-                    marker = ''
+                        marker = 'v'
+                        markersize = 2
                     linestyle = lines[other_count%len(lines)]
                     color = colors[other_count%len(colors)]
                     other_count += 1
@@ -49,7 +54,7 @@ class PlotHolder:
                     plt.plot((np.asarray(self.times[version])/(24*3600)),
                             self.data[version][nuc], label=version_label,
                             linestyle=linestyle, marker=marker, color=color,
-                            markersize=5)
+                            markersize=markersize)
                 except KeyError:
                     continue
             plt.xlabel('Time [d]')

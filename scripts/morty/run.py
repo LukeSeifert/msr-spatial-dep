@@ -41,7 +41,7 @@ if __name__ == '__main__':
     plotting_params['parasitic_absorption'] = False
     plotting_params['image_directory'] = './images/'
     plotting_params['msre'] = True
-    plotting_params['surf_plot'] = True
+    plotting_params['surf_plot'] = False
 
     analysis_params = {}
     analysis_params['test_run'] = False
@@ -57,11 +57,11 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Xe' #'Nb'
-    run_params['target_isobar'] = '135' #'95'
-    run_params['spacenodes'] = 200
+    run_params['target_element'] = 'Xe'#'Nb'
+    run_params['target_isobar'] = '135'#'95'
+    run_params['spacenodes'] = 500
     run_params['num_nuclides'] = 5
-    run_params['data_gen_option'] = 'openmc'
+    run_params['data_gen_option'] = 'hardcoded'
     run_params['final_time'] = 1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12

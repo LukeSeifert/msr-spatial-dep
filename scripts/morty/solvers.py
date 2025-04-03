@@ -131,7 +131,7 @@ class DiffEqSolvers:
                 power_vals.append(p0)
         elif version == 'sin':
             for t in times:
-                power = p0/2 * (np.sin(np.pi * t / 30) + 1)
+                power = p0/2 * (np.sin(np.pi * t / (1*60*60)) + 1)
                 power_vals.append(power)
         elif version == 'neg_exp':
             for t in times:
@@ -142,7 +142,7 @@ class DiffEqSolvers:
         0, 1.25*24*3600, 1.25*24*3600+10*60, 1.25*24*3600*1e6
 ]
             pulse_rel_powers = [
-          1,           10,               10
+          1,           1e-1,               1e-1
 ]
             power_vals = _time_sorter(pulse_times, pulse_rel_powers, times)
 
