@@ -81,6 +81,7 @@ class DiffEqSolvers:
         self.times = run_params['times']
         self.power = run_params['power_W']
         self.p0 = run_params['p0']
+        self.run_params = run_params
 
         for xi, x in enumerate(self.positions):
             if x > self.z_core_outlet:
@@ -96,6 +97,8 @@ class DiffEqSolvers:
         self.dec_fracs = data_params['dec_frac']
         self.FYs = data_params['FYs']
         self.reprs = data_params['repr_rates']
+
+        self._avg_plot_flow()
 
         self.mu = {}
         for nuclide in range(self.num_nucs):
@@ -632,8 +635,45 @@ class DiffEqSolvers:
         if self.run_params['flow_version'] == 'constant':
             self.flow_vec = self.base_flow
         elif self.run_params['flow_version'] == 'expdec':
-            self.flow_vec = np.asarray(self.base_flow) * np.exp(-t)
+            self.flow_vec = np.asarray(self.base_flow) * np.exp(-t/(self.run_params['final_time'] / 16))
+        elif self.run_params['flow_version'] == 'expinc':
+            self.flow_vec = np.asarray(self.base_flow) * np.exp(t/self.run_params['final_time'])
+        elif self.run_params['flow_version'] == 'lindec':
+            self.flow_vec = np.asarray(self.base_flow) * (-t/self.run_params['final_time'] + 1)
         return None
+
+    def _avg_plot_flow(self) -> None:
+        plot_vals = list()
+        times = self.run_params['times']
+        if self.run_params['flow_version'] == 'constant':
+            for t in times:
+                plot_vals.append(np.mean(self.base_flow))
+        elif self.run_params['flow_version'] == 'expdec':
+            for t in times:
+                plot_vals.append(np.mean(self.base_flow) * np.exp(-t/(self.run_params['final_time'] / 16)))
+        elif self.run_params['flow_version'] == 'lindec':
+            for t in times:
+                plot_vals.append(np.mean(self.base_flow) * (-t/self.run_params['final_time'] + 1))
+        if times[-1] > 24*3600:
+            times = times/(24*3600)
+            xlab = '[d]'
+        elif times[-1] > 3600:
+            times = times/(3600)
+            xlab = '[h]'
+        elif times[-1] > 60:
+            times = times/(60)
+            xlab = '[m]'
+        else:
+            xlab = '[s]'
+
+        plt.step(times, plot_vals, where='post')
+        plt.xlabel(f'Time {xlab}')
+        plt.ylabel('Flow Rate [cm/s]')
+        plt.savefig('images/flow_hist.png')
+        plt.close()
+
+
+
 
 
     def _update_sources(self, ti):
