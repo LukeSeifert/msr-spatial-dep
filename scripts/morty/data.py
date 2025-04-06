@@ -424,7 +424,10 @@ class DataHandler:
         for i in range(self.num_nucs):
             tracked_nucs[i] = nuc_names[i]
             lams[i] = np.log(2) / half_life_data[i]
-            repr_val[i] = 0
+            try:
+                repr_val[i] = self.run_params['reprocessing'][tracked_element]
+            except KeyError:
+                repr_val[i] = 0
             FYs[i] = fiss_macro_xs * yield_data[i] * self.flux
             loss_rates[i] = net_xs_data[i] * self.flux
             for pathi, path in enumerate(decay_chain_path_data):
