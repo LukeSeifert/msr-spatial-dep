@@ -62,7 +62,7 @@ if __name__ == '__main__':
     run_params['spacenodes'] = 500
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 50 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 60*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
@@ -73,7 +73,8 @@ if __name__ == '__main__':
     run_params['flow_version'] = 'constant'
     run_params['flux_shape'] = 'flat'
     run_params['fissile_atom_dens_cc'] = 8.41e19
-    run_params['reprocessing'] = {'Xe': 1/20*0,
+    run_params['repr_loc'] = 'ex'
+    run_params['reprocessing'] = {'Xe': 0.04,
                                   'I' : 1/20*0,
                                   'Te': 1/20*0,
                                   'Sb': 1/20*0,
@@ -83,9 +84,9 @@ if __name__ == '__main__':
 
     # https://www.osti.gov/servlets/purl/1488384
     #run_params['linear_flow_rate'] = 600 # cm/s
-    run_params['linear_flow_rate'] = 10 #21.75 #21.75 # cm/s
+    run_params['linear_flow_rate'] = 21.75 #21.75 # cm/s
     #run_params['net_length'] = run_params['residence_time'] * 600 #608.06 cm
-    run_params['net_length'] = 100 #608.06
+    run_params['net_length'] = 608.06
     run_params['residence_time'] = run_params['net_length'] / run_params['linear_flow_rate'] # s
     #run_params['vol_flow_rate'] = 75708
     #run_params['fuel_fraction'] = 0.225
@@ -101,9 +102,11 @@ if __name__ == '__main__':
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
     available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step']
-    available_flows = ['constant', 'expdec']
+    available_flows = ['constant', 'expdec', 'lindec', 'expinc']
+    available_locs = ['in', 'ex']
 
     allowed_params['temperature'] = available_temperatures
+    allowed_params['repr_loc'] = available_locs
     allowed_params['neutron_energy'] = available_energies
     allowed_params['data_gen_option'] = available_data
     allowed_params['solver_method'] = available_methods
@@ -114,6 +117,7 @@ if __name__ == '__main__':
     check_data(run_params, allowed_params)
     data_params = data.DataHandler(run_params).data_params
     #solvers.DiffEqSolvers(run_params, data_params, run=False)
+
 
     analyzer = analysis.AnalysisCollection(
         analysis_params, run_params, data_params)

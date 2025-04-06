@@ -82,6 +82,7 @@ class DiffEqSolvers:
         self.power = run_params['power_W']
         self.p0 = run_params['p0']
         self.run_params = run_params
+        self.repr_loc = run_params['repr_loc']
 
         for xi, x in enumerate(self.positions):
             if x > self.z_core_outlet:
@@ -102,8 +103,13 @@ class DiffEqSolvers:
 
         self.mu = {}
         for nuclide in range(self.num_nucs):
+
             incore_losses = self.lams[nuclide] + self.loss_rates[nuclide]
-            excore_losses = self.lams[nuclide] + self.reprs[nuclide]
+            excore_losses = self.lams[nuclide]
+            if self.repr_loc == 'in':
+                incore_losses += self.reprs[nuclide]
+            elif self.repr_loc == 'ex':
+                excore_losses += self.reprs[nuclide]
             cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
 
@@ -717,10 +723,14 @@ class DiffEqSolvers:
 
         """
         for nuclide in range(self.num_nucs):
-            scaling_factor = 1
+            scaling_factor = 1 
             if self.run_params['solver_method'] == 'ODE':
                 if self.run_params['scaled_flux']:
                     scaling_factor = self.run_params['frac_in']
+                    if self.repr_loc == 'in':
+                        repr_factor = scaling_factor
+                    elif self.repr_loc == 'ex':
+                        repr_factor = 1 - scaling_factor
                     losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (1 - scaling_factor)
                 else:
                     losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape + self.reprs[nuclide]
@@ -728,7 +738,11 @@ class DiffEqSolvers:
             else:
                 incore_losses = (self.lams[nuclide] + 
                                 self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape)
-                excore_losses = self.lams[nuclide] + self.reprs[nuclide]
+                excore_losses = self.lams[nuclide]
+                if self.repr_loc == 'in':
+                    incore_losses += self.reprs[nuclide]
+                elif self.repr_loc == 'ex':
+                    excore_losses += self.reprs[nuclide]
                 cur_nuc_losses = self._format_spatial(incore_losses, excore_losses)
             self.mu[nuclide] = cur_nuc_losses
         return 
