@@ -177,9 +177,8 @@ class AnalysisCollection:
                 except IndexError:
                     continue
                 nuclide_split_name = re.split('(\\d+)', nuclide)
-                if nuclide_split_name[2] != '_m':
-                    nuclide_texname = fr'$^{{{nuclide_split_name[1]}}}${nuclide_split_name[0]}'
-                else:
+                nuclide_texname = fr'$^{{{nuclide_split_name[1]}}}${nuclide_split_name[0]}'
+                if nuclide_split_name[2] == 'm' or nuclide_split_name[2] == '_m':
                     nuclide_texname = fr'$^{{{nuclide_split_name[1]}m}}${nuclide_split_name[0]}'
 
                 lab = f'{self.data["labs"][i]} {nuclide_texname}'
