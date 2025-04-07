@@ -365,7 +365,7 @@ class PlotterCollection:
         start_time = time()
         from matplotlib.animation import FuncAnimation
         plt.rcParams['savefig.dpi'] = 100
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(1, 1)
         num_nucs = []
         for i, x in enumerate(data_dict['xs']):
             num_nucs.append(np.shape(data_dict['ys'][i])[2])
@@ -373,12 +373,13 @@ class PlotterCollection:
         max_conc = np.max(data_dict['ys'])
 
         def update(frame):
-            ax.clear()
+            ax.cla()
+            plt.tight_layout()
             plt.xlabel('Space [cm]')
-            plt.vlines(self.run_params['core_outlet'], 0, 1e1 * max_conc,
+            plt.vlines(self.run_params['core_outlet'], 0, 1.05*max_conc,
                        color='black')
             plt.ylabel('Concentration [at/cc]')
-            plt.ylim((1e-5 * max_conc, 1e1 * max_conc))
+            plt.ylim((1e-1, 1.05*max_conc))
             plt.yscale(self.yscale)
 
             for nuclide_i in range(num_nucs):
@@ -394,10 +395,12 @@ class PlotterCollection:
                     ax.set_title(f'Time: {round(frame*self.run_params["dt"], 4)} s')
                     plt.legend()
             
-
+        net_animation_time = 10*1000
+        frame_count = len(self.run_params['times'])
         animation = FuncAnimation(fig, update,
-                                  frames=len(self.run_params['times']),
-                                  interval=1)
+                                  frames=frame_count,
+                                  interval=net_animation_time/frame_count,
+                                  repeat_delay=3000)
         animation.save(f'{self.imdir}isobar_evolution.gif', writer='pillow')
         plt.close()
         plt.rcParams['savefig.dpi'] = 300
