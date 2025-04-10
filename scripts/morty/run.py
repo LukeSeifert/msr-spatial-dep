@@ -57,12 +57,13 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Xe'#'Nb'
-    run_params['target_isobar'] = '135'#'95'
+    run_params['target_element'] = 'Nb'#'Nb'
+    run_params['target_isobar'] = '95'#'95'
     run_params['spacenodes'] = 500
+    run_params['time_mult'] = 1
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 60*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 56340000/10000 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
@@ -74,11 +75,11 @@ if __name__ == '__main__':
     run_params['flux_shape'] = 'flat'
     run_params['fissile_atom_dens_cc'] = 8.41e19
     run_params['repr_loc'] = 'ex'
-    run_params['reprocessing'] = {'Xe': 0.04,
+    run_params['reprocessing'] = {'Xe': 1/20*0,
                                   'I' : 1/20*0,
                                   'Te': 1/20*0,
                                   'Sb': 1/20*0,
-                                  'Nb': 2.3e-8*0,
+                                  'Nb': 2.3e-8*100,
                                   'Tc': 1.61e-3*0,
                                   'Mo': 2.19e-7*0}
 

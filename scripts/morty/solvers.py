@@ -66,6 +66,7 @@ class DiffEqSolvers:
             run_params['final_time'] +
             run_params['dt'],
             run_params['dt'])
+        run_params['reduced_times'] = run_params['times'][::run_params['time_mult']]
         run_params['power_W'] = self._power_hist(version=run_params['power_version'],
                                         times=run_params['times'],
                                         p0=run_params['p0'])
@@ -79,6 +80,7 @@ class DiffEqSolvers:
         self.positions = run_params['positions']
         self.dt = run_params['dt']
         self.times = run_params['times']
+        self.reduced_times = run_params['reduced_times']
         self.power = run_params['power_W']
         self.p0 = run_params['p0']
         self.run_params = run_params
@@ -160,7 +162,7 @@ class DiffEqSolvers:
         0, 3600, 3600+10*60, 3600*1e6
 ]
             pulse_rel_powers = [
-          1,           1e-1,               1e-1
+          1,           1e1,               1e1
 ]
             power_vals = _time_sorter(pulse_times, pulse_rel_powers, times)
 
@@ -604,7 +606,7 @@ class DiffEqSolvers:
 
         """
         result_mat = np.zeros(
-            (len(self.times), self.spacenodes, self.num_nucs))
+            (len(self.reduced_times), self.spacenodes, self.num_nucs), dtype=np.float32)
         for nuclide in range(self.num_nucs):
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
@@ -849,6 +851,7 @@ class DiffEqSolvers:
         self._initialize_concs()
         ODE_result_mat = self._initialize_result_mat()
         self.scaling_factor = 1
+        res_index = 1
         if self.run_params['scaled_flux']:
             self.scaling_factor = self.run_params['frac_in']
         for ti, t in enumerate(self.times[1:]):
@@ -858,8 +861,10 @@ class DiffEqSolvers:
             for nuclide in range(self.num_nucs):
                 self.concs[nuclide] = self._external_ODE_no_step(
                     self.concs[nuclide], nuclide)
-
-            ODE_result_mat = self._update_result_mat(ODE_result_mat, ti + 1)
+            
+            if ti%self.run_params['time_mult'] == 0:
+                ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
+                res_index += 1
         self.result_mat = ODE_result_mat
         return ODE_result_mat
 
@@ -876,6 +881,7 @@ class DiffEqSolvers:
         """
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
+        res_index = 1
         for ti, t in enumerate(self.times[:-1]):
             self._set_flow(t)
             self._update_sources(ti)
@@ -884,6 +890,9 @@ class DiffEqSolvers:
             for nuclide in range(self.num_nucs):
                 self.concs[nuclide] = self._external_PDE_no_step(
                     self.concs[nuclide], nuclide)
-            result_mat = self._update_result_mat(result_mat, ti + 1)
+
+            if ti%self.run_params['time_mult'] == 0:
+                result_mat = self._update_result_mat(result_mat, res_index)
+                res_index += 1
         self.result_mat = result_mat
         return result_mat

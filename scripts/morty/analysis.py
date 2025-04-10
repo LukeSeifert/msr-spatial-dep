@@ -63,7 +63,8 @@ class AnalysisCollection:
         self.data_params = DataHandler(self.run_params).data_params
         solver = solvers.DiffEqSolvers(
             self.run_params, self.data_params, run=False)
-        x_vals = solver.run_params['times']
+        #x_vals = solver.run_params['times']
+        x_vals = solver.run_params['reduced_times']
         x = xfactor * x_vals
         result_matrix = solvers.DiffEqSolvers(
             self.run_params, self.data_params).result_mat
@@ -220,14 +221,14 @@ class AnalysisCollection:
         midpoint = int(self.run_params['spacenodes']*self.run_params['frac_in'])
         for nuclide in range(self.run_params['num_nuclides']):
             paras_rate = []
-            for ti, t in enumerate(self.run_params['times']):
+            for ti, t in enumerate(self.run_params['reduced_times']):
                 # TODO - this doesn't properly account for the in-core ex-core diff
                 spat_avg_conc = np.mean(result_mat[ti, :, nuclide])
                 parasitic = spat_avg_conc * \
                     self.data_params['loss_rates'][nuclide]
                 paras_rate.append(parasitic)
             integral_form = integrate.cumulative_trapezoid(
-                paras_rate, x=self.run_params['times'])
+                paras_rate, x=self.run_params['reduced_times'])
             integral_form = np.insert(integral_form, 0, 0.0)
             parasitic_abs_val.append(integral_form)
         return parasitic_abs_val
