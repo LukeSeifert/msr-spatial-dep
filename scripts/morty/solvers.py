@@ -606,7 +606,7 @@ class DiffEqSolvers:
 
         """
         result_mat = np.zeros(
-            (len(self.reduced_times), self.spacenodes, self.num_nucs), dtype=np.float32)
+            (len(self.reduced_times)+1, self.spacenodes, self.num_nucs), dtype=np.float32)
         for nuclide in range(self.num_nucs):
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
@@ -801,6 +801,11 @@ class DiffEqSolvers:
 
         return conc
 
+    def _trim_result_matrix(self, res_mat):
+        if res_mat.shape[0] > len(self.run_params['reduced_times']):
+            res_mat = np.delete(res_mat, -1, axis=0)
+        return res_mat
+
     def _external_PDE_no_step(self, conc, nuclide_index):
         """
         This function applies a single time step iteration of the PDE
@@ -865,6 +870,7 @@ class DiffEqSolvers:
             if ti%self.run_params['time_mult'] == 0:
                 ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
                 res_index += 1
+        ODE_result_mat = self._trim_result_matrix(ODE_result_mat)
         self.result_mat = ODE_result_mat
         return ODE_result_mat
 
@@ -882,7 +888,7 @@ class DiffEqSolvers:
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
         res_index = 1
-        num_reduced_times = len(self.run_params['reduced_times'])
+
         for ti, t in enumerate(self.times[:-1]):
             self._set_flow(t)
             self._update_sources(ti)
@@ -892,8 +898,10 @@ class DiffEqSolvers:
                 self.concs[nuclide] = self._external_PDE_no_step(
                     self.concs[nuclide], nuclide)
 
-            if ti%self.run_params['time_mult'] == 0 and ti <= num_reduced_times:
+            #if t in self.run_params['reduced_times']:
+            if ti%self.run_params['time_mult'] == 0:
                 result_mat = self._update_result_mat(result_mat, res_index)
                 res_index += 1
+        result_mat = self._trim_result_matrix(result_mat)
         self.result_mat = result_mat
         return result_mat
