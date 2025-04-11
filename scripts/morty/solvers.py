@@ -882,6 +882,7 @@ class DiffEqSolvers:
         self._initialize_concs()
         result_mat = self._initialize_result_mat()
         res_index = 1
+        num_reduced_times = len(self.run_params['reduced_times'])
         for ti, t in enumerate(self.times[:-1]):
             self._set_flow(t)
             self._update_sources(ti)
@@ -891,7 +892,8 @@ class DiffEqSolvers:
                 self.concs[nuclide] = self._external_PDE_no_step(
                     self.concs[nuclide], nuclide)
 
-            if ti%self.run_params['time_mult'] == 0:
+            if ti%self.run_params['time_mult'] == 0 and ti <= num_reduced_times:
+                print(ti)
                 result_mat = self._update_result_mat(result_mat, res_index)
                 res_index += 1
         self.result_mat = result_mat
