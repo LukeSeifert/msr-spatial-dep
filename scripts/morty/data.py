@@ -275,7 +275,7 @@ class DataHandler:
             Ya = 0.00145764
             Yb = 0.0321618
             Yc = 0.0292737
-            Yd_m1 = 0.0110156
+            Yd_m1 = 0.00110156
             Yd = 0.000785125
             yield_data = [Yd,
                           Yc,
