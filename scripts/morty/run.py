@@ -102,7 +102,7 @@ if __name__ == '__main__':
     available_flux_shapes = ['flat', 'sin']
     available_data = ['openmc', 'hardcoded']
     available_methods = ['ODE', 'PDE']
-    available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step']
+    available_versions = ['constant', 'sin', 'neg_exp', 'msre', 'step', 'sqwv']
     available_flows = ['constant', 'expdec', 'lindec', 'expinc']
     available_locs = ['in', 'ex']
 

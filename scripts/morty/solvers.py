@@ -150,7 +150,15 @@ class DiffEqSolvers:
                 power_vals.append(p0)
         elif version == 'sin':
             for t in times:
-                power = p0/2 * (np.sin(np.pi * t / (10) + 3*np.pi/2) + 1)
+                power = p0/2 * (np.sin(np.pi * t / (10/2) + 2*np.pi) + 1)
+                power_vals.append(power)
+        elif version == 'sqwv':
+            pulse_length = 10
+            for t in times:
+                if t % pulse_length < pulse_length/2:
+                    power = p0
+                else:
+                    power = 0
                 power_vals.append(power)
         elif version == 'neg_exp':
             for t in times:
