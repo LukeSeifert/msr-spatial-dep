@@ -130,6 +130,8 @@ class PlotterCollection:
         except UnboundLocalError:
             pos = spatial_eval_node
             print(f'No data for {nuclide_i} figure at spatial index {pos}')
+        except OverflowError:
+            print(f'Not plotting {plot_main_name} {nuclide_i} {ending}')
         plt.close()
         return
     
@@ -202,7 +204,10 @@ class PlotterCollection:
                 if num_plot > 1 and legend_opt:
                     plt.legend()
                 plot_main_name = f'{self.imdir}{data_dict["savename"]}'
-                plt.savefig(f'{plot_main_name}_{nuclide_i}_pcntdiff.png')
+                try:
+                    plt.savefig(f'{plot_main_name}_{nuclide_i}_pcntdiff.png')
+                except OverflowError:
+                    print(f'Not plotting {plot_main_name} {nuclide_i} pcntdiff')
                 plt.close()
 
         else:
