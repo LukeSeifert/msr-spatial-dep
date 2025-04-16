@@ -42,11 +42,11 @@ class PlotHolder:
                     if version == 'ODE':
                         version_label = 'Scaled Flux'
                         marker = '^'
-                        markersize = 2
+                        markersize = 1
                     elif version == 'PDE':
                         version_label = 'Spatially Resolved'
                         marker = 'v'
-                        markersize = 2
+                        markersize = 1
                     linestyle = lines[other_count%len(lines)]
                     color = colors[other_count%len(colors)]
                     other_count += 1
