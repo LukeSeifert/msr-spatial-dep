@@ -423,10 +423,18 @@ class DataHandler:
         debug = False
         for i in range(self.num_nucs):
             tracked_nucs[i] = nuc_names[i]
+            tracked_element = ''
+            for char in tracked_nucs[i]:
+                if char.isalpha():
+                    tracked_element += char
+                else:
+                    break
             lams[i] = np.log(2) / half_life_data[i]
             try:
                 repr_val[i] = self.run_params['reprocessing'][tracked_element]
+                print(f'{tracked_element} has non-zero repr rate')
             except KeyError:
+                print(f'Repr of {nuc_names[i]} = 0')
                 repr_val[i] = 0
             FYs[i] = fiss_macro_xs * yield_data[i] * self.flux
             loss_rates[i] = net_xs_data[i] * self.flux
