@@ -28,6 +28,9 @@ class AnalysisCollection:
         self.analysis_params = analysis_params
         self.run_params = run_params
         self.data_params = data_params
+        solve_obj = solvers.DiffEqSolvers(
+            self.run_params, self.data_params, run=False)
+        self.fission_shape = solve_obj.fission_shape
         return
 
     def _time_lab(self):
@@ -222,10 +225,7 @@ class AnalysisCollection:
         for nuclide in range(self.run_params['num_nuclides']):
             paras_rate = []
             for ti, t in enumerate(self.run_params['reduced_times']):
-                # TODO - this doesn't properly account for the in-core ex-core diff
-                spat_avg_conc = np.mean(result_mat[ti, :, nuclide])
-                parasitic = spat_avg_conc * \
-                    self.data_params['loss_rates'][nuclide]
+                parasitic = np.mean(result_mat[ti, :, nuclide] * self.data_params['loss_rates'][nuclide] * self.fission_shape)
                 paras_rate.append(parasitic)
             integral_form = integrate.cumulative_trapezoid(
                 paras_rate, x=self.run_params['reduced_times'])

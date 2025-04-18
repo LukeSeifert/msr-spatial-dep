@@ -109,6 +109,25 @@ class PlotterCollection:
             plt.tight_layout()
             plt.savefig(f'{self.imdir}parasitic_absorption_{nuclide_index}.png')
             plt.close()
+        
+        for nuclide_index in range(np.shape(parasitic_use_data)[1]):
+            for method_i in range(len(parasitic_data['parasitic'])):
+                method_name = parasitic_data['labs'][method_i]
+                x = self.run_params['times'] * scale_fac
+                if method_i == 0:
+                    y_base = parasitic_use_data[method_i][nuclide_index]
+                else:
+                    y = parasitic_use_data[method_i][nuclide_index]
+                lab = self.data_params['tracked_nucs'][nuclide_index]
+                if method_i != 0:
+                    pcnt_diff = ((y_base - y) / (y_base) * 100) 
+                    plt.plot(x, pcnt_diff, label=f'{method_name} {lab} Captures')
+            plt.yscale(self.yscale)
+            plt.xlabel(xlab)
+            plt.ylabel('Percent Difference [%]')
+            plt.tight_layout()
+            plt.savefig(f'{self.imdir}parasitic_absorption_pcntdiff_{nuclide_index}.png')
+            plt.close()
         return
     
     def _time_plot_helper(self, data_dict, nuclide_i, ending,

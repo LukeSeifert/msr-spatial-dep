@@ -2,6 +2,7 @@ import numpy as np
 from time import time
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import warnings
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -614,7 +615,7 @@ class DiffEqSolvers:
 
         """
         result_mat = np.zeros(
-            (len(self.reduced_times)+1, self.spacenodes, self.num_nucs), dtype=np.float32)
+            (len(self.reduced_times)+1, self.spacenodes, self.num_nucs), dtype=np.float64)
         for nuclide in range(self.num_nucs):
             result_mat[0, :, nuclide] = self.concs[nuclide]
         return result_mat
@@ -628,11 +629,15 @@ class DiffEqSolvers:
 
         if self.run_params['flux_shape'] == 'flat':
             for i, pos in enumerate(self.positions):
-                source_shape.append(1)
+                shape = 1
+                source_shape.append(shape)
 
         elif self.run_params['flux_shape'] == 'sin':
+            warnings.warn('Sinusoidal flux shape has flux scaling pre-incorporated')
             for i, pos in enumerate(self.positions):
                 shape = np.sin(np.pi * pos / max_in_pos)
+                if pos > max_in_pos:
+                    shape = 0
                 source_shape.append(shape)
                 
         return np.asarray(source_shape)
@@ -741,7 +746,7 @@ class DiffEqSolvers:
                         repr_factor = scaling_factor
                     elif self.repr_loc == 'ex':
                         repr_factor = 1 - scaling_factor
-                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (1 - scaling_factor)
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (1 - repr_factor)
                 else:
                     losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape + self.reprs[nuclide]
                 cur_nuc_losses = self._format_spatial(losses, losses)
