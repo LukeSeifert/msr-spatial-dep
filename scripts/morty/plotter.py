@@ -352,8 +352,8 @@ class PlotterCollection:
 
                 yticks = np.linspace(0, len(y)-1, 10, dtype=int)
                 xticks = np.linspace(0, len(x)-1, 10, dtype=int)
-                yticklabels = [f'{y[idx]:.0f}' for idx in yticks]
-                xticklabels = [f'{x[idx]:.0f}' for idx in xticks]
+                yticklabels = [f'{y[idx]:.1f}' for idx in yticks]
+                xticklabels = [f'{x[idx]:.1f}' for idx in xticks]
 
 
                 ax = sns.heatmap(pivotted, cmap=color,
