@@ -124,7 +124,7 @@ class PlotterCollection:
                     plt.plot(x, pcnt_diff, label=f'{method_name} {lab} Captures')
             plt.yscale(self.yscale)
             plt.xlabel(xlab)
-            plt.ylabel('Percent Difference [%]')
+            plt.ylabel('Difference [%]')
             plt.tight_layout()
             plt.savefig(f'{self.imdir}parasitic_absorption_pcntdiff_{nuclide_index}.png')
             plt.close()
@@ -218,7 +218,7 @@ class PlotterCollection:
                     plt.plot(x, pcnt_diffs, label=lab)
                     num_plot += 1
                 plt.xlabel(data_dict['xlab'])
-                plt.ylabel('Percent Difference [%]')
+                plt.ylabel('Difference [%]')
                 plt.yscale(self.yscale)
                 if num_plot > 1 and legend_opt:
                     plt.legend()

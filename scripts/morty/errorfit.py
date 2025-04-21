@@ -77,7 +77,7 @@ else:
     plt.plot(xs, peak, marker='.', linestyle='--', color='blue', label='Peak')
     plt.plot(xs, ss, marker='x', linestyle='-.', color='orange', label='Equilibrium')
 
-plt.ylabel('Error [%]')
+plt.ylabel('Difference [%]')
 plt.legend()
 if chem:
     plt.xlabel('Removal Rate [1/s]')
