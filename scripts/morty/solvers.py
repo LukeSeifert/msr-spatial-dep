@@ -746,7 +746,7 @@ class DiffEqSolvers:
                         repr_factor = scaling_factor
                     elif self.repr_loc == 'ex':
                         repr_factor = 1 - scaling_factor
-                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (1 - repr_factor)
+                    losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * scaling_factor * self.fission_shape + self.reprs[nuclide] * (repr_factor)
                 else:
                     losses = self.lams[nuclide] + self.power[ti]/self.p0 * self.loss_rates[nuclide] * self.fission_shape + self.reprs[nuclide]
                 cur_nuc_losses = self._format_spatial(losses, losses)
