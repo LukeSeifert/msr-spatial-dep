@@ -35,7 +35,7 @@ if reactor_name == "MSRE":
     Vnet = 2116111
     V1 = Vnet * 0.272
     V2 = Vnet * (1-0.272)
-    rho_mu = 2.32         # density of fuel salt [g/cm3]
+    rho_mu = 2.32556         # density of fuel salt [g/cm3]
     rho_sigma = 0.0
     # power [W] and flux [n/cm2-s]
     P_mu = 7340000        # 8 MWth
@@ -110,7 +110,7 @@ deposition_chemical_removal_Sb = 0
 deposition_chemical_removal_Te = 0
 
 # Density of fuel salt [g/cm3]
-rho_mu = 2.32
+rho_mu = 2.32556
 rho_sigma = 0.0
 
 # Pick Solver Method: Should be one of - 'hybr' , 'lm' , 'broyden1' , 'broyden2' , 'anderson' , 'linearmixing' ,
