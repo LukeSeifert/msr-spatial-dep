@@ -73,7 +73,10 @@ class AnalysisCollection:
             self.run_params, self.data_params).result_mat
         y = result_matrix
         lab = f'{method}{methodname_extension}'
-        self.parasitic_results.append(self._parasitic_abs(result_matrix))
+        try:
+            self.parasitic_results.append(self._parasitic_abs(result_matrix))
+        except ValueError:
+            pass
         return x, y, lab
 
 
@@ -336,5 +339,35 @@ class AnalysisCollection:
         self._save_data(xs, ys, labs, xlab, ylab, savename)
 
         self.run_params['spacenodes'] = current_spacenodes
+        data = self.data
+        return data
+
+
+    def CFL_refinement(self, cfl_values=[0.1, 1, 10, 100]):
+        """
+        Run with current parameters for varying CFL conditions.
+
+        Parameters
+        ----------
+        cfl_values : list of float
+            CFL conditions for each run
+
+        Returns
+        -------
+        data : dict
+            key : str
+                Name of variable
+        """
+        current_cfl = self.run_params['CFL_cond']
+        methods = cfl_values
+        ylab = 'Concentration [atoms/cc]'
+        savename = 'CFL_refinement'
+        time_factor, xlab = self._time_lab()
+        xs, ys, labs = self._method_change(methods, 'CFL_cond',
+                                           time_factor,
+                                           methodname_extension=' CFL')
+        self._save_data(xs, ys, labs, xlab, ylab, savename)
+
+        self.run_params['CFL_cond'] = current_cfl
         data = self.data
         return data
