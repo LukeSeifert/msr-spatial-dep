@@ -46,9 +46,10 @@ if __name__ == '__main__':
     analysis_params = {}
     analysis_params['test_run'] = False
     test_name = 'Scaled Flux'
-    analysis_params['PDE_ODE_compare'] = True
+    analysis_params['PDE_ODE_compare'] = False
     analysis_params['nuclide_refinement'] = False
     analysis_params['spatial_refinement'] = False
+    analysis_params['CFL_refinement'] = True
 
     run_params = {}
     run_params['scaled_flux'] = True
@@ -57,17 +58,17 @@ if __name__ == '__main__':
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
-    run_params['target_element'] = 'Nb'#'Nb'
-    run_params['target_isobar'] = '95'#'95'
-    run_params['spacenodes'] = 500
+    run_params['target_element'] = 'Xe'#'Nb'
+    run_params['target_isobar'] = '135'#'95'
+    run_params['spacenodes'] = 3200
     run_params['time_mult'] = 1
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 56340000/10000 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
-    run_params['CFL_cond'] = 0.9
+    run_params['CFL_cond'] = 10
     #run_params['num_times'] = int(5e5)
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'constant'
@@ -145,5 +146,10 @@ if __name__ == '__main__':
         spatial_nodes = [5, 10, 100, 200, 500, 1000]
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
+
+    if analysis_params['CFL_refinement']:
+        print('-' * 50)
+        CFL_nodes = [100, 50, 25, 10, 5, 2.5, 1, 0.5, 0.25, 0.1]
+        data_dict = analyzer.CFL_refinement(CFL_nodes)
 
     print(f'Took {round(time() - start, 1)} seconds')
