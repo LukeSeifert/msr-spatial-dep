@@ -3,6 +3,7 @@ from time import time
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import warnings
+from scipy.interpolate import interp1d
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -600,7 +601,8 @@ class DiffEqSolvers:
         """
         self.concs = []
         for nuclide in range(self.num_nucs):
-            self.concs.append(np.zeros(self.spacenodes))
+            self.concs.append(self._format_spatial(0, 0))
+            #self.concs.append(np.zeros(self.spacenodes))
         return
 
     def _initialize_result_mat(self):
@@ -818,6 +820,15 @@ class DiffEqSolvers:
         if res_mat.shape[0] > len(self.run_params['reduced_times']):
             res_mat = np.delete(res_mat, -1, axis=0)
         return res_mat
+    
+    def _semi_lagrangian_step(self, conc, flow_vec, dt, positions):
+        backtracked_pos = positions - flow_vec * dt
+
+        L = positions[-1] - positions[0] + (positions[1] - positions[0])
+        backtracked_pos = (backtracked_pos - positions[0]) % L + positions[0]
+
+        interp_func = interp1d(positions, conc, kind='linear', fill_value="extrapolate", assume_sorted=True)
+        return interp_func(backtracked_pos)
 
     def _external_PDE_no_step(self, conc, nuclide_index):
         """
@@ -835,24 +846,10 @@ class DiffEqSolvers:
         conc : :class:`np.ndarray`
             Concentration over spatial nodes at current time
         """
-        S_vec = self.S[nuclide_index]
-        mu_vec = self.mu[nuclide_index]
-        J = np.arange(0, self.spacenodes)
-        Jm1 = np.roll(J, 1)
-        dz = np.diff(self.positions)[0]
 
-        conc_mult = 1 - mu_vec * self.dt
-        add_source = S_vec * self.dt
-        CFL_vec = (self.flow_vec * self.dt / dz)
-        #conc = add_source + conc_mult * conc + CFL_vec * (conc[Jm1] - conc)
-        #print(S_vec[0])
-        #print(S_vec[-1])
-        #print(mu_vec[0])
-        #print(mu_vec[-1])
-        #input()
-        #conc = conc + self.dt * (S_vec - mu_vec*conc - self.flow_vec * (conc - conc[Jm1])/dz)
-        conc = ((conc + self.dt * (S_vec + self.flow_vec/dz * (conc[Jm1] - conc))) / (1 + mu_vec * self.dt))
+        conc_adv = self._semi_lagrangian_step(conc, self.flow_vec, self.dt, self.positions)
 
+        conc = (conc_adv + self.dt * self.S[nuclide_index]) / (1 + self.mu[nuclide_index] * self.dt)
 
         return conc
 
