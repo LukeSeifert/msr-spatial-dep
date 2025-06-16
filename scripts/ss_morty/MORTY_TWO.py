@@ -433,8 +433,8 @@ for i in range(MCSiter):
     Yb = Y_independent[isotopeb]
     Yc = Y_independent[isotopec]
     Yd_m1 = Y_cumulative[isotoped_m1] # I use indepdendent here
-    print('Using independent yield for Yd_m1')
-    Yd_m1 = Y_independent[isotoped_m1]
+    print('We use indepdentent yield for Yd_m1, but SSMORTY does not account for I -> mXe')
+    print('Using cumulative yield for Yd_m1')
     Yd = Y_independent[isotoped]
     
     FYa = PC * P * Ya   # atoms/s = fissions/J * J/s * yield_fraction
@@ -442,6 +442,7 @@ for i in range(MCSiter):
     FYc = PC * P * Yc
     FYd_m1 = PC * P * Yd_m1
     FYd = PC * P * Yd
+
 
     # # # Decay Chain: Isotope A
     # source term in each region [atoms/cm3/s]
@@ -621,19 +622,25 @@ eqn2114_atccd_m1 = eqn2114_d_m1 / sum(Vi_mu)
 eqn2114_atccd = eqn2114_d / sum(Vi_mu)
 cum_anal_atcc = np.array([eqn2114_atcca, eqn2114_atccb, eqn2114_atccc, eqn2114_atccd_m1, eqn2114_atccd])
 
+avgA = sum(Nia.x * Vi) / sum(Vi)
+avgB = sum(Nib.x * Vi) / sum(Vi)
+avgC = sum(Nic.x * Vi) / sum(Vi)
+avgD_m1 = sum(Nid_m1.x * Vi) / sum(Vi)
+avgD = sum(Nid.x * Vi) / sum(Vi)
+
 print('Minimum Concentration of ', isotopea, ':', "{:.3E}".format(np.min(Nia.x)), ' atoms/cm3')
 print('Maximum Concentration of ', isotopea, ':', "{:.3E}".format(np.max(Nia.x)), ' atoms/cm3')
-print('Average Concentration of ', isotopea, ':', "{:.3E}".format(np.mean(Nia.x)), ' atoms/cm3')
+print('Average Concentration of ', isotopea, ':', "{:.3E}".format(avgA), ' atoms/cm3')
 print('Minimum Concentration of ', isotopeb, ':', "{:.3E}".format(np.min(Nib.x)), ' atoms/cm3')
 print('Maximum Concentration of ', isotopeb, ':', "{:.3E}".format(np.max(Nib.x)), ' atoms/cm3')
-print('Average Concentration of ', isotopeb, ':', "{:.3E}".format(np.mean(Nib.x)), ' atoms/cm3')
+print('Average Concentration of ', isotopeb, ':', "{:.3E}".format(avgB), ' atoms/cm3')
 print('Minimum Concentration of ', isotopec, ':', "{:.3E}".format(np.min(Nic.x)), ' atoms/cm3')
 print('Maximum Concentration of ', isotopec, ':', "{:.3E}".format(np.max(Nic.x)), ' atoms/cm3')
-print('Average Concentration of ', isotopec, ':', "{:.3E}".format(np.mean(Nic.x)), ' atoms/cm3')
+print('Average Concentration of ', isotopec, ':', "{:.3E}".format(avgC), ' atoms/cm3')
 print('Minimum Concentration of ', isotoped_m1, ':', "{:.3E}".format(np.min(Nid_m1.x)), ' atoms/cm3')
 print('Maximum Concentration of ', isotoped_m1, ':', "{:.3E}".format(np.max(Nid_m1.x)), ' atoms/cm3')
-print('Average Concentration of ', isotoped_m1, ':', "{:.3E}".format(np.mean(Nid_m1.x)), ' atoms/cm3')
+print('Average Concentration of ', isotoped_m1, ':', "{:.3E}".format(avgD_m1), ' atoms/cm3')
 print('Minimum Concentration of ', isotoped, ':', "{:.3E}".format(np.min(Nid.x)), ' atoms/cm3')
 print('Maximum Concentration of ', isotoped, ':', "{:.3E}".format(np.max(Nid.x)), ' atoms/cm3')
-print('Average Concentration of ', isotoped, ':', "{:.3E}".format(np.mean(Nid.x)), ' atoms/cm3')
+print('Average Concentration of ', isotoped, ':', "{:.3E}".format(avgD), ' atoms/cm3')
 print('-'*50)
