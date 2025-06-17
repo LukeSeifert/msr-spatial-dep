@@ -65,12 +65,12 @@ if __name__ == '__main__':
     run_params['time_mult'] = 100
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 60*60 #3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 60*60*24 #3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
     #run_params['CFL_cond'] = 10
-    run_params['num_times'] = int(100)
+    run_params['num_times'] = int(50000)
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'constant'
     run_params['flow_version'] = 'constant'
