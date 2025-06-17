@@ -49,7 +49,8 @@ if __name__ == '__main__':
     analysis_params['PDE_ODE_compare'] = False
     analysis_params['nuclide_refinement'] = False
     analysis_params['spatial_refinement'] = False
-    analysis_params['CFL_refinement'] = True
+    analysis_params['CFL_refinement'] = False
+    analysis_params['times_refinement'] = True
 
     run_params = {}
     run_params['scaled_flux'] = True
@@ -61,15 +62,15 @@ if __name__ == '__main__':
     run_params['target_element'] = 'Xe'#'Nb'
     run_params['target_isobar'] = '135'#'95'
     run_params['spacenodes'] = 3200
-    run_params['time_mult'] = 1
+    run_params['time_mult'] = 100
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 60*60 #3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
-    run_params['CFL_cond'] = 10
-    #run_params['num_times'] = int(5e5)
+    #run_params['CFL_cond'] = 10
+    run_params['num_times'] = int(100)
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'constant'
     run_params['flow_version'] = 'constant'
@@ -147,9 +148,19 @@ if __name__ == '__main__':
         data_dict = analyzer.spatial_refinement(spatial_nodes)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
+    if analysis_params['times_refinement']:
+        print('-' * 50)
+        time_nodes = [5, 50, 500, 5000, 50000, 500000]
+        data_dict = analyzer.time_refinement(time_nodes)
+        #plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
+
+
     if analysis_params['CFL_refinement']:
         print('-' * 50)
-        CFL_nodes = [100, 50, 25, 10, 5, 2.5, 1, 0.5, 0.25, 0.1]
+        #CFL_nodes = [1000, 500, 250, 100, 50, 10]
+        CFL_nodes = [1000, 500, 250, 100, 50, 10, 5, 1]
+        #CFL_nodes = [100, 50, 25, 10, 5, 2.5, 1, 0.5, 0.25, 0.1]
         data_dict = analyzer.CFL_refinement(CFL_nodes)
+        #plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     print(f'Took {round(time() - start, 1)} seconds')

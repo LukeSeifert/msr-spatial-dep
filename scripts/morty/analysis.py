@@ -341,9 +341,37 @@ class AnalysisCollection:
         self.run_params['spacenodes'] = current_spacenodes
         data = self.data
         return data
+    
+    def time_refinement(self, time_nodes=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]):
+        """
+        Run with current parameters for varying number of time nodes.
+
+        Parameters
+        ----------
+        time_nodes : list of int
+            Number of time nodes for each run
+
+        Returns
+        -------
+        data : dict
+            key : str
+                Name of variable
+        """
+        current_num_times = self.run_params['num_times']
+        methods = time_nodes
+        ylab = 'Concentration [atoms/cc]'
+        savename = 'time_refinement'
+        time_factor, xlab = self._time_lab()
+        xs, ys, labs = self._method_change(methods, 'num_times',
+                                           time_factor,
+                                           methodname_extension=' times')
+        self._save_data(xs, ys, labs, xlab, ylab, savename)
+        self.run_params['num_times'] = current_num_times
+        data = self.data
+        return data
 
 
-    def CFL_refinement(self, cfl_values=[0.1, 1, 10, 100]):
+    def CFL_refinement(self, cfl_values=[100, 10, 1, 0.1, 0.01]):
         """
         Run with current parameters for varying CFL conditions.
 

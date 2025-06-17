@@ -57,12 +57,13 @@ class DiffEqSolvers:
         run_params['positions'] = np.linspace(
             0, run_params['excore_outlet'], run_params['spacenodes'])
         
-        #run_params['dt'] = run_params['final_time'] / run_params['num_times']
-        #run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
-        run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
+        run_params['dt'] = run_params['final_time'] / run_params['num_times']
+        run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
+        print(f'{run_params["CFL_cond"] = }')
+        #run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
         self.CFL_cond = run_params['CFL_cond']
-        if self.CFL_cond > 0.9:
-            print(f'{run_params["CFL_cond"] = }')
+        #if self.CFL_cond > 0.9:
+        #    print(f'{run_params["CFL_cond"] = }')
         run_params['times'] = np.arange(
             0,
             run_params['final_time'] +
