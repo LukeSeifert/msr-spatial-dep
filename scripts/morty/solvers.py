@@ -3,7 +3,6 @@ from time import time
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import warnings
-from scipy.interpolate import interp1d
 
 class DiffEqSolvers:
     def __init__(self, run_params, data_params, run=True):
@@ -57,10 +56,10 @@ class DiffEqSolvers:
         run_params['positions'] = np.linspace(
             0, run_params['excore_outlet'], run_params['spacenodes'])
         
-        run_params['dt'] = run_params['final_time'] / run_params['num_times']
-        run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
-        print(f'{run_params["CFL_cond"] = }')
-        #run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
+        #run_params['dt'] = run_params['final_time'] / run_params['num_times']
+        #run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
+        run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
+        print(f'Number of time steps: {int(run_params["final_time"] / run_params["dt"])}')
         self.CFL_cond = run_params['CFL_cond']
         #if self.CFL_cond > 0.9:
         #    print(f'{run_params["CFL_cond"] = }')
@@ -822,15 +821,6 @@ class DiffEqSolvers:
             res_mat = np.delete(res_mat, -1, axis=0)
         return res_mat
     
-    def _semi_lagrangian_step(self, conc, flow_vec, dt, positions):
-        backtracked_pos = positions - flow_vec * dt
-
-        L = positions[-1] - positions[0] + (positions[1] - positions[0])
-        backtracked_pos = (backtracked_pos - positions[0]) % L + positions[0]
-
-        interp_func = interp1d(positions, conc, kind='linear', fill_value="extrapolate", assume_sorted=True)
-        return interp_func(backtracked_pos)
-
     def _external_PDE_no_step(self, conc, nuclide_index):
         """
         This function applies a single time step iteration of the PDE
@@ -847,10 +837,13 @@ class DiffEqSolvers:
         conc : :class:`np.ndarray`
             Concentration over spatial nodes at current time
         """
-
-        conc_adv = self._semi_lagrangian_step(conc, self.flow_vec, self.dt, self.positions)
-
-        conc = (conc_adv + self.dt * self.S[nuclide_index]) / (1 + self.mu[nuclide_index] * self.dt)
+        S_vec = self.S[nuclide_index]
+        mu_vec = self.mu[nuclide_index]
+        J = np.arange(0, self.spacenodes)
+        Jm1 = np.roll(J, 1)
+        dz = np.diff(self.positions)[0]
+        advection_term = (conc[Jm1] - conc) / dz # First order upwind
+        conc = ((conc + self.dt * (S_vec + self.flow_vec * advection_term)) / (1 + mu_vec * self.dt))
 
         return conc
 

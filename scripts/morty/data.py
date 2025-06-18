@@ -444,8 +444,8 @@ class DataHandler:
                 tracked_nucs[i] = nuc_names[i]
                 lams[i] = 1e-10
                 repr_val[i] = 0
-                loss_rates[i] = 1
-                FYs[i] = 1  # a/cc-s
+                loss_rates[i] = 0
+                FYs[i] = 0  # a/cc-s
 
 
 
