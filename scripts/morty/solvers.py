@@ -698,10 +698,6 @@ class DiffEqSolvers:
         plt.savefig('images/flow_hist.png')
         plt.close()
 
-
-
-
-
     def _update_sources(self, ti):
         """
         Update source terms based on concentrations
@@ -896,19 +892,43 @@ class DiffEqSolvers:
         result_mat = self._initialize_result_mat()
         res_index = 1
 
-        for ti, t in enumerate(self.times[:-1]):
-            self._set_flow(t)
-            self._update_sources(ti)
-            self._update_losses(ti)
+        if self.run_params['speed_factor_calc']:
+            looped = False
+            speeds = []
+            t_use = 0
+            for ti, t in enumerate(self.times[:-1]):
+                self._set_flow(t)
+                self._update_sources(ti)
+                self._update_losses(ti)
 
-            for nuclide in range(self.num_nucs):
-                self.concs[nuclide] = self._external_PDE_no_step(
-                    self.concs[nuclide], nuclide)
+                for nuclide in range(self.num_nucs):
+                    self.concs[nuclide] = self._external_PDE_no_step(
+                        self.concs[nuclide], nuclide)
+                
+                if np.isclose(self.concs[nuclide][-1], 1) and not looped:
+                    speed = self.positions[-1] * (1  - self.run_params['frac_in']) / (t - t_use)
+                    speeds.append(speed)
+                    looped = True
+                elif np.isclose(self.concs[nuclide][-1], 0) and looped:
+                    t_use = t
+                    looped = False
+            print(f'Speeds : {speeds}')
+            speed_factor = self.run_params['base_speed'] / np.mean(speeds[1:])
+            print(f'Speed factor : {speed_factor}')
+        else:
+            for ti, t in enumerate(self.times[:-1]):
+                self._set_flow(t)
+                self._update_sources(ti)
+                self._update_losses(ti)
 
-            #if t in self.run_params['reduced_times']:
-            if ti%self.run_params['time_mult'] == 0:
-                result_mat = self._update_result_mat(result_mat, res_index)
-                res_index += 1
-        result_mat = self._trim_result_matrix(result_mat)
-        self.result_mat = result_mat
-        return result_mat
+                for nuclide in range(self.num_nucs):
+                    self.concs[nuclide] = self._external_PDE_no_step(
+                        self.concs[nuclide], nuclide)
+
+                #if t in self.run_params['reduced_times']:
+                if ti%self.run_params['time_mult'] == 0:
+                    result_mat = self._update_result_mat(result_mat, res_index)
+                    res_index += 1
+            result_mat = self._trim_result_matrix(result_mat)
+            self.result_mat = result_mat
+            return result_mat

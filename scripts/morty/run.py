@@ -53,6 +53,7 @@ if __name__ == '__main__':
     analysis_params['times_refinement'] = False
 
     run_params = {}
+    run_params['speed_factor_calc'] = False
     run_params['scaled_flux'] = True
     run_params['openmc_data_path'] = '/home/luke/projects/cross-section-libraries/nndc_hdf5/'
     run_params['temperature'] = '294K'
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     run_params['time_mult'] = 1
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 5*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 60*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
@@ -86,8 +87,9 @@ if __name__ == '__main__':
 
     # https://www.osti.gov/servlets/purl/1488384
     #run_params['linear_flow_rate'] = 600 # cm/s
-    speed_adjustment = 10/9.98 # for flux analysis
-    run_params['linear_flow_rate'] = speed_adjustment * 21.75 #21.75 # cm/s
+    speed_adjustment = 1.002 # for flux analysis and MSRE
+    run_params['base_speed'] = 21.75 # cm/s
+    run_params['linear_flow_rate'] = speed_adjustment * run_params['base_speed'] # cm/s
     #run_params['net_length'] = run_params['residence_time'] * 600 #608.06 cm
     run_params['net_length'] = 608.06
     run_params['residence_time'] = run_params['net_length'] / run_params['linear_flow_rate'] # s
