@@ -59,6 +59,9 @@ class DiffEqSolvers:
         #run_params['dt'] = run_params['final_time'] / run_params['num_times']
         #run_params['CFL_cond'] = (run_params['dt'] * run_params['max_flowrate'] / run_params['dz'])
         run_params['dt'] = run_params['dz'] * run_params['CFL_cond'] / run_params['max_flowrate']
+        print(f'Spatial discretization: {run_params["dz"]} cm')
+        print(f'Time step: {run_params["dt"]} s')
+        #run_params['dt'] = (run_params['dz'] / run_params['max_flowrate'])
         print(f'Number of time steps: {int(run_params["final_time"] / run_params["dt"])}')
         self.CFL_cond = run_params['CFL_cond']
         #if self.CFL_cond > 0.9:
@@ -601,7 +604,7 @@ class DiffEqSolvers:
         """
         self.concs = []
         for nuclide in range(self.num_nucs):
-            self.concs.append(self._format_spatial(0, 0))
+            self.concs.append(self._format_spatial(1, 0))
             #self.concs.append(np.zeros(self.spacenodes))
         return
 

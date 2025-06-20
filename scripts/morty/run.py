@@ -62,14 +62,14 @@ if __name__ == '__main__':
     run_params['target_element'] = 'Xe'#'Nb'
     run_params['target_isobar'] = '135'#'95'
     run_params['spacenodes'] = 500
-    run_params['time_mult'] = 100
+    run_params['time_mult'] = 1
     run_params['num_nuclides'] = 5
     run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 3600 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['final_time'] = 5*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
-    run_params['CFL_cond'] = 0.7
+    run_params['CFL_cond'] = 1
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'constant'
     run_params['flow_version'] = 'constant'
@@ -86,7 +86,8 @@ if __name__ == '__main__':
 
     # https://www.osti.gov/servlets/purl/1488384
     #run_params['linear_flow_rate'] = 600 # cm/s
-    run_params['linear_flow_rate'] = 21.75 #21.75 # cm/s
+    speed_adjustment = 10/9.98 # for flux analysis
+    run_params['linear_flow_rate'] = speed_adjustment * 21.75 #21.75 # cm/s
     #run_params['net_length'] = run_params['residence_time'] * 600 #608.06 cm
     run_params['net_length'] = 608.06
     run_params['residence_time'] = run_params['net_length'] / run_params['linear_flow_rate'] # s
@@ -138,11 +139,12 @@ if __name__ == '__main__':
 
     if analysis_params['nuclide_refinement']:
         print('-' * 50)
-        max_nuc = 6
+        nucs = [1, 5]
+        max_nuc = np.max(nucs)
         if max_nuc > 5 and run_params['data_gen_option'] == 'hardcoded':
             raise UserWarning(
                 'Hardcoded data only has 5 nuclides, cannot refine to more than 5')
-        data_dict = analyzer.nuclide_refinement(max_nuc=max_nuc)
+        data_dict = analyzer.nuclide_refinement(nucs=nucs)
         plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])
 
     if analysis_params['spatial_refinement']:

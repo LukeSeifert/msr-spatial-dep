@@ -284,7 +284,7 @@ class AnalysisCollection:
         data = self.data
         return data
 
-    def nuclide_refinement(self, max_nuc=5):
+    def nuclide_refinement(self, nucs=[1, 2, 3, 4, 5]):
         """
         Run with current parameters for varying number of nuclides.
 
@@ -300,7 +300,7 @@ class AnalysisCollection:
                 Name of variable
         """
         current_nuclides = self.run_params['num_nuclides']
-        methods = np.linspace(1, max_nuc, max_nuc).astype(int)
+        methods = nucs
         ylab = 'Concentration [atoms/cc]'
         savename = 'nuclide_refinement'
         time_factor, xlab = self._time_lab()
