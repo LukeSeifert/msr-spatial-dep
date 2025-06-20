@@ -22,8 +22,8 @@ plt.rcParams['savefig.dpi'] = 600
 ss_log = False
 peak_log = False
 
-chem = False
-flow_scaled = True
+chem = True
+flow_scaled = False
 flow_unscaled = False
 
 separate_marker_plot = False
@@ -32,8 +32,8 @@ length = 608.06
 
 if chem:
     xs = [0.05, 0.04, 0.03, 0.02, 0.01, 0.0]
-    peak = [7.5, 6.07, 4.57, 3.06, 1.5, 0.0033]
-    ss = [2.0, 1.29, 0.72, 0.32, 0.085, 9.4e-6]
+    peak = [7.46, 6.0, 4.52, 3.03, 1.520, 0.003]
+    ss = [0.882, 0.577, 0.33, 0.155, 0.04375, 1.17e-6]
 elif flow_scaled:
     #xs = [21.7e1, 21.7, 21.7e-1, 21.7e-2, 21.7e-3, 21.7*5e-4, 21.75*2.5e-4, 21.7e-4, 21.7*5e-5, 21.7e-5]
     #peak = [0.00036, 0.003, 0.027, 0.3, 2.3, 5.08, 7.64, 15.5, 23.4, 49]
