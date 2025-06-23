@@ -72,6 +72,9 @@ class DiffEqSolvers:
             run_params['dt'],
             run_params['dt'])
         run_params['reduced_times'] = run_params['times'][::run_params['time_mult']]
+        run_params['reduced_times'] = np.append(
+            run_params['reduced_times'],
+            run_params['final_time'])
         run_params['power_W'] = self._power_hist(version=run_params['power_version'],
                                         times=run_params['times'],
                                         p0=run_params['p0'])
@@ -873,6 +876,8 @@ class DiffEqSolvers:
             if ti%self.run_params['time_mult'] == 0:
                 ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
                 res_index += 1
+        if self.run_params['time_mult'] > 1:
+            ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
         ODE_result_mat = self._trim_result_matrix(ODE_result_mat)
         self.result_mat = ODE_result_mat
         return ODE_result_mat
@@ -929,6 +934,8 @@ class DiffEqSolvers:
                 if ti%self.run_params['time_mult'] == 0:
                     result_mat = self._update_result_mat(result_mat, res_index)
                     res_index += 1
+            if self.run_params['time_mult'] > 1:
+                result_mat = self._update_result_mat(result_mat, res_index)
             result_mat = self._trim_result_matrix(result_mat)
             self.result_mat = result_mat
             return result_mat
