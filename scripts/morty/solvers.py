@@ -606,8 +606,13 @@ class DiffEqSolvers:
 
         """
         self.concs = []
+        N0 = 1
+        fin= self.run_params['frac_in']
         for nuclide in range(self.num_nucs):
-            self.concs.append(self._format_spatial(1, 0))
+            if self.run_params['solver_method'] == 'PDE':
+                self.concs.append(self._format_spatial(N0, 0))
+            elif self.run_params['solver_method'] == 'ODE':
+                self.concs.append(self._format_spatial(N0*fin, N0*fin))
             #self.concs.append(np.zeros(self.spacenodes))
         return
 
@@ -876,8 +881,7 @@ class DiffEqSolvers:
             if ti%self.run_params['time_mult'] == 0:
                 ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
                 res_index += 1
-        if self.run_params['time_mult'] > 1:
-            ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
+        ODE_result_mat = self._update_result_mat(ODE_result_mat, res_index)
         ODE_result_mat = self._trim_result_matrix(ODE_result_mat)
         self.result_mat = ODE_result_mat
         return ODE_result_mat
@@ -934,8 +938,7 @@ class DiffEqSolvers:
                 if ti%self.run_params['time_mult'] == 0:
                     result_mat = self._update_result_mat(result_mat, res_index)
                     res_index += 1
-            if self.run_params['time_mult'] > 1:
-                result_mat = self._update_result_mat(result_mat, res_index)
+            result_mat = self._update_result_mat(result_mat, res_index)
             result_mat = self._trim_result_matrix(result_mat)
             self.result_mat = result_mat
             return result_mat
