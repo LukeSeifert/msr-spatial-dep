@@ -209,6 +209,7 @@ class PlotterCollection:
                     if i == 0:
                         continue
                     lab = f'{base_lab} - {data_dict[f"lab_method{i}_nuc{nuclide_i}"]}'
+                    lab = 'Difference Metric'
                     y = data_dict[f'{data_str}_avg_y_method{i}_nuc{nuclide_i}']
                     pcnt_diffs = ((base_y - y) / (base_y) * 100)
                     pcnt_diffs[np.isnan(pcnt_diffs)] = 0
@@ -218,7 +219,10 @@ class PlotterCollection:
                     plt.plot(x, pcnt_diffs, label=lab)
                     num_plot += 1
                 plt.xlabel(data_dict['xlab'])
-                min_y = np.min(pcnt_diffs)
+                try:
+                    min_y = np.min(pcnt_diffs)
+                except UnboundLocalError:
+                    return
                 mindex = np.where(pcnt_diffs == min_y)[0][0]
                 x_min = x[mindex]
                 plt.plot(x[-1], pcnt_diffs[-1], marker='*', markersize=8,
