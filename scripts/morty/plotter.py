@@ -218,6 +218,15 @@ class PlotterCollection:
                     plt.plot(x, pcnt_diffs, label=lab)
                     num_plot += 1
                 plt.xlabel(data_dict['xlab'])
+                min_y = np.min(pcnt_diffs)
+                mindex = np.where(pcnt_diffs == min_y)[0][0]
+                x_min = x[mindex]
+                plt.plot(x[-1], pcnt_diffs[-1], marker='*', markersize=8,
+                        color='orange', label='Equilibrium', linestyle='')
+                plt.plot(x_min, min_y,
+                         marker='s', markersize=8, color='blue',
+                         label='Peak', linestyle='')
+                plt.legend()
                 plt.ylabel('Difference [%]')
                 plt.yscale(self.yscale)
                 if num_plot > 1 and legend_opt:
