@@ -55,8 +55,9 @@ if __name__ == '__main__':
     run_params = {}
     run_params['speed_factor_calc'] = False
     run_params['scaled_flux'] = True
-    run_params['openmc_data_path'] = '/home/luke/projects/cross-section-libraries/nndc_hdf5/'
-    run_params['temperature'] = '294K'
+    #run_params['openmc_data_path'] = '/home/luke/projects/cross-section-libraries/nndc_hdf5/'
+    run_params['openmc_data_path'] = '/home/luke/projects/cross-section-libraries/endfb71/endfb71_hdf5/neutron/'
+    run_params['temperature'] = '900K'
     run_params['neutron_energy'] = 0.0253
     run_params['chain_path'] = '../../data/chain_endfb71_pwr.xml'
     run_params['fissile_nuclide'] = 'U235'
@@ -65,19 +66,19 @@ if __name__ == '__main__':
     run_params['spacenodes'] = 500
     run_params['time_mult'] = 1
     run_params['num_nuclides'] = 5
-    run_params['data_gen_option'] = 'hardcoded'
-    run_params['final_time'] = 60*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
+    run_params['data_gen_option'] = 'openmc'
+    run_params['final_time'] = 60*60 #3*24*60*60 #1.25*24*3600 + 100000 #56340000 #1.25*24*3600 + 100000 #  + 100000 #56340000 #1.25*24*3600 + 100_000 #29_210_400 #1.25 * 24 * 3600 #5
     run_params['solver_method'] = 'PDE'
     run_params['flux'] = 8.4e12 # 2.9e12 #1.61e13 #6e12
     run_params['frac_in'] = 0.272
-    run_params['CFL_cond'] = 1
+    run_params['CFL_cond'] = 1.0
     run_params['p0'] = 7.34e6 #8e6
     run_params['power_version'] = 'constant'
     run_params['flow_version'] = 'constant'
     run_params['flux_shape'] = 'flat'
     run_params['fissile_atom_dens_cc'] = 8.41e19
     run_params['repr_loc'] = 'ex'
-    run_params['reprocessing'] = {'Xe': 1/20*0,
+    run_params['reprocessing'] = {'Xe': 0.0,
                                   'I' : 1/20*0,
                                   'Te': 1/20*0,
                                   'Sb': 1/20*0,
@@ -101,7 +102,7 @@ if __name__ == '__main__':
 
 
     allowed_params = {}
-    available_temperatures = ['294K']
+    available_temperatures = ['250K', '294K', '600K', '900K', '1200K', '2500K']
     available_energies = [0.0253, 500_000, 14_000_000]
     available_flux_shapes = ['flat', 'sin']
     available_data = ['openmc', 'hardcoded']
@@ -141,7 +142,7 @@ if __name__ == '__main__':
 
     if analysis_params['nuclide_refinement']:
         print('-' * 50)
-        nucs = [1, 5]
+        nucs = [1, 2, 3, 4, 5, 6]
         max_nuc = np.max(nucs)
         if max_nuc > 5 and run_params['data_gen_option'] == 'hardcoded':
             raise UserWarning(
@@ -165,7 +166,8 @@ if __name__ == '__main__':
     if analysis_params['CFL_refinement']:
         print('-' * 50)
         #CFL_nodes = [1000, 500, 250, 100, 50, 10]
-        CFL_nodes = [1000, 500, 250, 100, 50, 10, 5, 1]
+        #CFL_nodes = [1000, 500, 250, 100, 50, 10, 5, 1]
+        CFL_nodes = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
         #CFL_nodes = [100, 50, 25, 10, 5, 2.5, 1, 0.5, 0.25, 0.1]
         data_dict = analyzer.CFL_refinement(CFL_nodes)
         #plotter_tool.plot_gen(data_dict, spatial_eval_positions=[])

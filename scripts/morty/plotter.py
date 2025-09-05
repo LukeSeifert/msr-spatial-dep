@@ -456,6 +456,32 @@ class PlotterCollection:
                 df.to_csv(f'{self.imdir}data_{nuclide_i}.csv', index=False)
         return
     
+    def line_plot(self, data_dict):
+        xs = self.run_params['positions']
+        ys = [i*0 for i in xs]
+        split = self.run_params['core_outlet']
+        x_in = [x for x in xs if x < split]
+        x_ex = [x for x in xs if x >= split]
+        y_in = [i*0 for i in x_in]
+        y_ex = [i*0 for i in x_ex]
+
+
+        fig, ax = plt.subplots(figsize=(6.4, 3.6))
+
+
+        ax.scatter(x_in, y_in, label='In-core Node', marker='1', s=50)
+        ax.scatter(x_ex, y_ex, label='Ex-core Node', marker='2', s=50)
+        ax.vlines(split, -0.5, 0.5,
+                    color='green', label='Core Outlet')
+        plt.yticks([])
+        plt.ylim((-0.5, 0.5))
+        plt.xlabel('Space [cm]')
+        ax.legend()
+        plt.tight_layout()
+        plt.savefig(f'{self.imdir}MSRE_1D.png')
+        plt.close()
+        return
+    
     def plot_gen(self, data_dict, spatial_eval_positions=[],
                  time_eval_positions=[],
                  surf_opt=True):
@@ -487,6 +513,7 @@ class PlotterCollection:
             self.gif_generate(data_dict)
         if self.plotting_params['parasitic_absorption']:
             self.parasitic_plot(data_dict)
+        self.line_plot(data_dict)
         
         return
 
