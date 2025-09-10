@@ -1,0 +1,1008 @@
+% Document template for ANS Journals
+% Options: footnoteAtEnd - Places all footnotes at the end of document
+%               Usage: \documentclass[footnoteAtEnd]{style/nseJournal}
+\documentclass{style/nseJournal}
+
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{todonotes}
+\usepackage{comment}
+
+\begin{document}
+
+\title{Accuracy of the Scaled Flux Method for Spatially Resolved Nuclide Transmutation in Flowing-Fuel Molten Salt Reactors} %title of paper
+
+% Use the \addAuthor macro to add authors in the order they should appear. The second argument corresponds to
+% the affiliation declared below.
+% The corresponding author should be wrapped in \correspondingAuthor
+\addAuthor{\correspondingAuthor{Luke Seifert}}{a}
+\correspondingEmail{seifert5@illinois.edu}
+\addAuthor{Shayan Shahbazi}{b}
+\addAuthor{Scott Richards}{b}
+\addAuthor{Madicken Munk}{a, c}
+\addAuthor{Kathryn Huff}{a}
+
+% Affiliations can be added in the order they should appear. For breaks in addresses, use either \\ or \tabularnewline
+\addAffiliation{a}{Advanced Reactors and Fuel Cycles Group,\\ University of Illinois at Urbana-Champaign, Urbana, IL}
+\addAffiliation{b}{Nuclear Science and Engineering Division,\\ Argonne National Laboratory, Argonne, IL}
+\addAffiliation{c}{School of Nuclear Science and Engineering,\\ Oregon State University, Corvallis, OR}
+
+% Add keywords to appear in Abstract in the order they should appear
+\addKeyword{Molten Salt Reactor}
+\addKeyword{Molten Salt Reactor Experiment}
+\addKeyword{Depletion}
+\addKeyword{Chemical Removal}
+\addKeyword{Flow Rate}
+\addKeyword{Power Oscillations}
+
+
+\titlePage
+
+\begin{abstract}
+Depletion simulations of flowing fuel molten salt reactors do not typically distinguish between in-core and ex-core regions.
+Instead, they either irradiate the entire primary loop while scaling the flux, or irradiate the in-core volume alone, which leaves some amount of fuel salt out of the simulation.
+Either approximation results in some level of inaccuracy in nuclide concentrations.
+The method of scaling the flux is more commonly used, but this approach assumes perfect mixing of the fuel salt in the primary loop.
+This work investigates a spatially resolved method to account for the impact flow and chemical removal has on concentrations of nuclides rapidly and accurately.
+Specifically, the spatially resolved model uses one-dimensional advection, which assumes no mixing in the primary loop.
+This model is used to provide the most conservative possible comparison, as any amount of mixing would only move the result closer to the scaled flux method.
+Comparisons are made in this work between this spatially resolved model, scaled flux model, other work from the literature, and experimental data.
+These comparisons show that the scaled flux method is sufficient for modeling most nuclides unless there is a large spatially dependent loss term, near-stationary flow rate, or artificial power oscillations with almost no mixing.
+In such cases, a spatially resolved method is necessary.
+\end{abstract}
+
+
+
+\section{Introduction}\label{sec:1}
+
+Liquid-fueled molten salt reactor (MSR) development started in the 1950s with the Aircraft Reactor Experiment \cite{bettis_aircraft_1957}.
+Progress continued in the Molten Salt Reactor Experiment (MSRE) in the 1960s \cite{haubenreich_experience_1970}.
+After that, solid-fueled light water reactors became the focus, which have since become the most common nuclear reactor used in the industry.
+%After that, more focus was placed on solid fueled light water reactors, which have since become the most common nuclear reactor used in the industry.
+However, the Generation IV International Forum in the early 2000s designated the MSR as one of the six advanced reactors of interest moving forward \cite{kelly_generation_2014}.
+Since then, MSRs have garnered further interest, such as the 2020 Advanced Reactor Demonstration Program award for \$113 million over seven years to the Molten Chloride Reactor Experiment.
+
+Interest has shifted to MSRs, and many existing simulation codes and methods must adjust to account for the moving fuel.
+In particular, depletion simulations are of interest.
+In solid-fueled reactors, the fuel does not experience significant advection or diffusion of nuclides.
+However, MSRs have the fuel circulate through the in-core and ex-core regions.
+The depletion simulations must account for these regions with different power densities and the effects of circulation.
+Modeling this behavior accurately is vital, as the fuel composition affects reactor dynamics, reactor safety, and safeguards.
+
+%Several methods have been demonstrated to account for the movement of the fuel.
+One approach is computationally inexpensive and is called the scaled flux method \cite{betzler2021liquid}.
+The scaled flux method scales the flux by the fraction of fuel salt in-core compared to ex-core.
+This approach does not model the in-core and ex-core regions explicitly, and instead assumes the salt is perfectly mixed in the primary loop.
+
+Another approach has shown how spatial resolution can be investigated using a system of ordinary differential equations to solve the Bateman equation.
+This approach can estimate the steady-state concentration of certain nuclides across a flow loop, but it does not account for temporal resolution \cite{shahbazi_steady-state_2022}.
+%Another approach is to calculate the steady-state concentration, changing the system of ordinary differential equations to spatial rather than temporal relations \cite{shahbazi_steady-state_2022}.
+
+The toolkit MCNP/ADDER \cite{anderson_user_2022} has also been used to account for flow and chemical removal between neutron transport-coupled fuel depletion steps over the MSRE power history \cite{fei_validation_2022}.
+But within ADDER, ex-core loss terms (e.g., decay and chemical removal) are only treated after the calculation of the coarse depletion steps (e.g., months), as opposed to simultaneously on the timescale of the flow loop residence time (e.g., seconds).
+This results in an accurate removal of elements except for those nuclides that have both an ex-core loss term and a non-negligible neutron absorption cross section.
+
+Alternatively, a more accurate treatment was recently demonstrated through MOOSE-based coupling of the deterministic neutron transport code Griffin with the thermal fluids code Pronghorn, allowing for spatial and temporal resolution of certain nuclides \cite{tanocoupled2023}.
+Tano et al.\ present an approach where only insoluble, medium-lived, and high concentration nuclides are tracked with pre-computed spatial distributions, which only need to be updated if the medium-lived isotopes are not in equilibrium after the thermal-hydraulics perturbation.
+
+Spatially and temporally resolved approaches, such as the one used by Tano et al., are more computationally expensive than those that only require solving a system of ordinary differential equations.
+However, Tano et al.\ has shown that including circulation of the fuel salt in depletion directly affects the equilibrium concentration of $^{135}$Xe by approximately 45\% compared to a spatially unresolved approach without flux scaling \cite{tanocoupled2023}.
+This indicates there may be a need for spatially resolved depletion simulations to get accurate fuel salt compositions.
+
+
+%Other approaches, such as the method proposed by Tano et al.\ using Griffin and Pronghorn, model the flow more explicitly \cite{tanocoupled2023}.
+%Tano et al.\ present an approach where only insoluble, medium-lived, and high concentration nuclides are tracked with pre-computed spatial distributions, which only need to be updated if the medium-lived isotopes are not in equilibrium after the thermal-hydraulics perturbation.
+%This approach is more computationally expensive than the other approaches that only require solving a system of ordinary differential equations.
+%However, these works have shown that including advection in depletion directly affects the equilibrium concentration of \ce{ ^{135}Xe } by approximately 45\% \cite{tanocoupled2023, fei_validation_2022}.
+%This means that depletion simulations of MSRs need to include advection to generate accurate results.
+%However, Tano et al.\ showed that these methods are still computationally expensive, even when attempting to simplify the problem \cite{tanocoupled2023}.
+
+Tano et al.\ and Betzler have both described fully modeling advection in depletion as computationally intractable \cite{tanocoupled2023, betzler_liquid-fueled_2021}.
+%Including advection in depletion has been referred to as computationally "intractable" \cite{betzler_liquid-fueled_2021, tanocoupled2023}.
+%This is because tracking the $\sim$2000 nuclides over space and time requires new methods rather than those used for the time dependent system of ordinary differential equations.
+This is because tracking all nuclides over space and time requires far more computational work than handling a traditional time dependent system of ordinary differential equations (ODEs).
+This spatially resolved system of partial differential equations (PDEs) requires accuracy in the short time scale flow effects.
+These small time steps cause multi-year depletion simulations to be exceedingly expensive.
+
+
+%Methods for solving the spatially resolved system of partial differential equations (PDEs) require accurately capturing short time scale flow effects, which makes multi-year-long depletion simulations exceedingly expensive.
+
+However, Tano et al.\ showed that not all nuclides must be spatially resolved to obtain accurate results \cite{tanocoupled2023}.
+The present work utilizes this idea from Tano et al. and extends a previous steady-state approach \cite{shahbazi_steady-state_2022}.
+This work isolates isobars of interest and adjusts the steady-state approach by accounting for time resolution in the system of differential equations.
+%The present work takes this idea a step further and isolates isobars of interest.
+%These isobars capture the beta-decay parents, providing higher fidelity than models of a single nuclide.
+High-fidelity thermal hydraulic simulations are computationally expensive, so instead, a spatially resolved model with 1D advection is used to capture the in-core and ex-core effects.
+With the simplifications implemented, this method can run on an laptop in minutes, rather than requiring a supercomputer allocation.
+
+Because this model does not account for any mixing, it will provide the largest difference from the scaled flux method, which uses perfect mixing.
+%The advection model uses finite differencing upwind in space and explicit in time to solve the system of partial differential equations.
+If the scaled flux model and the spatially resolved model with 1D advection give the same results, then that means that both no mixing and perfect mixing will give the same results for that problem.
+This means that, for that category of problem, the scaled flux method can be used over a spatially resolved method with low cost and high accuracy.
+
+%The specific isobar of interest used to demonstrate the effectiveness of this approach is the 135 isobar.
+%Specifically, antimony, tellurium, iodine, xenon, and the metastable form of xenon are considered.
+%This isobar is selected because, for neutrons at thermal energies, \ce{ ^{135}Xe } has a large cross section.
+
+%The fission yields and source terms come from a neutronics simulation of the molten salt reactor experiment.
+%The cross sections used assume a temperature of 294 Kelvin and that the neutrons are at 0.0253 eV.
+%The geometry and flow rate data for the MSRE come from the open source documentation from the OpenMSR GitHub repository \cite{openmsr}.
+
+%When comparing the results of \ce{ ^{135}Xe } using the method proposed in this work to the common method, it is found that there is approximately a 127\% difference after 1.25 days.
+%This difference is similar to the difference found by Tano et al.\ for the molten salt fast reactor \cite{tanocoupled2023}.
+%However, using the scaled flux method reduces this difference to 0.005\%.
+%The scaled flux method thus allows non-spatially resolved methods to generate accurate results for a steady-state solve.
+%However, at 10 seconds into the simulation, the scaled flux method differs from the spatially-resolved method by 2276\%.
+%This means that, without using a high-fidelity solver or tracking many nuclides, the methodology proposed in this work can provide more accurate fuel composition results than using the scaled flux method while the system is not at equilibrium.
+%This means that if depleted compositions are needed for non-equilibrium conditions, such as a reactor transient, then the method proposed in this work is able to give a more accurate prediction of that concentration.
+%This work thus improves the efficiency of generating accurate data for use in reactor dynamics, reactor safety, and safeguards.
+
+
+\section{Methods}
+
+
+The ODE form of the Bateman equation written in simplified terms for nuclide $i$, which only contains time dependence, is given as
+
+\begin{equation}
+    \frac{d N_i (t)}{d t} = S_i(t) - \mu_i(t) N_i(t),
+\label{eq:gen-form-ode}
+\end{equation}
+\begin{equation}
+    S_i(t) = \phi(t) FY_i \Sigma_f f_{in} + \sum_{j \ne i} \lambda_j N_j(t) \gamma_{j \rightarrow i},
+    \label{eq:source-ode}
+\end{equation}
+\begin{equation}
+    \mu_i(t) = \lambda_i + r_i(t) f_{ex} + \phi(t) \sigma_{a, i} f_{in},
+    \label{eq:loss-ode}
+\end{equation}
+where
+\begin{align}
+    N_i &= \text{Concentration of nuclide $i$ $[atoms \cdot cm^{-3}]$} \nonumber\\
+    S_i &= \text{Source rate $[atoms \cdot cm^{-3} \cdot s^{-1}]$} \nonumber\\
+    \mu_i &= \text{Loss rate $[s^{-1}]$} \nonumber\\
+    \phi(t) &= \text{Time dependent neutron flux $[n \cdot cm^{-2} \cdot s^{-1}]$} \nonumber \\
+    FY_i &= \text{Fission yield of nuclide $i$ $[-]$} \nonumber\\
+    \Sigma_f &= \text{Macroscopic fission cross section of the fuel $[cm^{-1}]$} \nonumber \\
+    \gamma_{j \rightarrow i} &= \text{Branching ratio of $j$ to $i$ $[-]$} \nonumber\\
+    \lambda_j &= \text{Decay constant of nuclide $j$ $[s^{-1}]$} \nonumber \\
+    r_i &= \text{Chemical removal rate $[s^{-1}]$} \nonumber \\
+    \sigma_{a, i} &= \text{Microscopic absorption cross section of nuclide $i$ $[cm^2]$} \nonumber \\
+    f_{in} &= \text{Fraction of fuel salt in-core $[-]$} \nonumber\\
+    f_{ex} &= \text{Fraction of fuel salt ex-core $[-]$}.
+\end{align}
+
+The unscaled flux method uses Equations \eqref{eq:gen-form-ode}, \eqref{eq:source-ode}, and \eqref{eq:loss-ode} where the in-core and ex-core fractions of fuel salt, $f_{in}$ and $f_{ex}$, are equal to one. This is because chemical removal is applied to the entire salt volume unscaled, as is the neutron flux.
+The scaled flux method uses the same equation, but it applies the in-core and ex-core fractions appropriately.
+When one-dimensional spatial dependence is added to Equation \eqref{eq:gen-form-ode} with only advection considered, a PDE is created of the form
+%The one-dimensional PDE form of the equation to be solved for each nuclide, $i$, in this work is shown in Equation \eqref{eq:gen-form}.
+
+\begin{equation}
+    \frac{\partial N_i (z, t)}{\partial t} + \nu(z, t) \frac{\partial N_i (z, t)}{\partial z} = S_i(z, t) - \mu_i(z, t) N_i(z, t),
+\label{eq:gen-form}
+\end{equation}
+where
+\begin{align}
+    \nu(z, t) &= \text{linear flow rate $[cm \cdot s^{-1}]$} \nonumber \\
+    z &= \text{linear distance through primary loop $[cm]$}.
+\end{align}
+
+Equation \eqref{eq:gen-form} is used in this work with a periodic boundary condition to provide the spatially resolved concentrations for target nuclides.
+%The spatially resolved equation does not include diffusion of nuclides because thermal molten salt reactors are an advection-dominated system \cite{advec-dom}.
+The source term is comprised of decay sources and fission yields in this work.
+%Sources of nuclide $i$ from parasitic absorption are not considered, as it would require including more nuclides, which would increase the computational cost.
+Sources of nuclide $i$ from parasitic absorption are currently not considered, as the impact is assumed to be sufficiently smaller than the fission and decay parent sources.
+%However, future work may want to include this source.
+The loss term includes losses from both decay and the neutron total capture cross section in the core region.
+The loss term can also include a chemical removal term resolved in both space and time for nuclide $i$.
+
+%\subsection{Simplifications}
+
+To solve the coupled system of equations given in Equation \eqref{eq:gen-form} in a computationally efficient manner, several simplifications are made. 
+%Instead of solving depletion with an advection term included, this work can instead have no reliance on depletion results, or a loose coupling approach. 
+The results do not account for changes in the fuel or evolution of the neutron energy spectra \cite{openmc}.
+Instead, these terms are assumed to be constant, which can be a reasonable approximation if fresh fuel is added and fission product poisons are removed during online reprocessing.
+Another simplification in this work is the use of only one spatial dimension and uniform flow.
+This includes simplifications to the flow of the fuel salt, which can only change in time and the single spatial dimension.
+%This assumption neglects turbulent effects or vortices, which have a larger presence in some reactor designs, such as the Molten Salt Fast Reactor (MSFR).
+%For flow through channels, such as in the MSRE, this approximation is more reasonable.
+
+\subsection{Data}
+%The method presented in this work uses two types of data, specifically reactor data and nuclear data.
+%These include depletion data, reactor data, and nuclear data. 
+%These include reactor data and nuclear data. 
+%The use of depletion data is not investigated in this work, though it could be used to generate source terms that evolve more accurately over a longer period of time.
+%However, the purpose of this work is to demonstrate that this method can be deployed rapidly and in a computationally efficient manner.
+%The reactor data is specific to the reactor of interest.
+Custom scripts combined with OpenMC use the linear flow rate, average neutron energy, average neutron flux, in-core fraction of fuel salt, ex-core fraction of fuel salt, in-core fuel salt volume, ex-core fuel salt volume, and average temperature to generate the appropriate cross sections and terms in Equation \eqref{eq:gen-form}.
+%Custom scripts combined with OpenMC use these data to generate the appropriate cross sections and terms in Equation \eqref{eq:gen-form}.
+The solver uses the average temperature and energy to generate one-group cross sections from OpenMC.
+
+The scripts use OpenMC to access general nuclear data in ENDF-B/VII.1 \cite{openmc, Chadwick20112887short}.
+These data include fission yield fractions, decay chains, branching ratios, half-lives, and cross sections.
+These data are important for properly constructing the source and loss terms for each nuclide, while the decay chains are useful for constructing the relationships between them.
+
+%To run the solver, the user must supply the reactor data, the fissile nuclide, the target nuclide, the number of nuclides to include, the number of spatial nodes, and the final solve time.
+%When the user inputs a target nuclide, the solver steps backwards through the isobar and includes evaluations of branching decays that lead back to the target nuclide. 
+
+The results in this work use the data shown in Table \ref{tab:sim-params}.
+The fissile concentration, neutron flux, nominal power, power history, and in-core fraction come from the MCNP/ADDER simulation of the MSRE \cite{anderson_user_2022, fei_validation_2022}.
+%The neutron flux, power, and temperature have simplified values. 
+The other terms come from the data from the OpenMSR project \cite{openmsr}.
+
+\renewcommand{\arraystretch}{1.1}
+\begin{table}[!ht]
+    \centering
+    \caption{Simulation parameters used in this work.}
+    \begin{tabular}{l r r}
+    \hline
+    Parameter & Value & Units\\
+    \hline
+    Fissile Nuclide  & $^{235}U$ & - \\
+    Fissile Concentration & $8.41 \times 10^{19}$  & $\frac{atoms}{cm^3}$\\
+    Neutron Flux & $8.4 \times 10^{12}$ & $\frac{n}{cm^2 s}$\\
+    Neutron Energy & $0.02533$  & $eV$\\
+    Salt Density & $2.32556$ & $\frac{g}{cm^3}$\\
+    Temperature & $294$ &  $K$\\
+    Nominal Power & $7.34$  & $MW$\\
+    Primary Loop Flow Length & $608.06$ & $cm$\\
+    In-core Salt Fraction & $27.2$ & $\%$\\
+    Ex-core Salt Fraction & $72.8$ & $\%$\\
+    Volume & $2.116111$ & $m^3$\\
+    Linear Flow Rate & $21.75$ & $\frac{cm}{s}$\\
+    \hline
+    \end{tabular}
+    
+    \label{tab:sim-params}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\subsection{Solver}
+
+This work uses finite differencing upwind, or backwards, in space and explicit in time to generate a coupled system of PDEs.
+Equation \eqref{eq:pdesolve} is used to solve for the concentration at each subsequent time step as:
+\begin{equation}
+    %N_{k}^{(l+1)} = \left( \frac{1}{1+\mu_k^{(l)}} \right) \left ( N_k^{(l)} + \Delta t S_k^{(l)} +\frac{\Delta t \nu_k^{(l)}}{\Delta z} \left( N_{k-1}^{(l)} - N_k^{(l)} \right) \right),
+    N_k^{(l+1)} = N_k^{(l)} 
++ \Delta t \left( 
+S_k^{(l)} 
+- \mu_k^{(l)} N_k^{(l)} 
+- \nu_k^{(l)}  \frac{ N_k^{(l)} - N_{k-1}^{(l)} }{\Delta z}
+\right),
+    \label{eq:pdesolve}
+\end{equation}
+where
+\begin{align}
+    N_{k}^{(l)} &= \text{Concentration at node $k$ and time $l$ $[atoms \cdot cm^{-3}]$} \nonumber \\
+    \mu_{k}^{(l)} &= \text{Loss term at node $k$ and time $l$ $[s^{-1}]$} \nonumber \\
+    S_{k}^{(l)} &= \text{Source term at node $k$ and time $l$ $[atoms \cdot cm^{-3} \cdot s^{-1}]$} \nonumber \\
+    \nu_{k}^{(l)} &= \text{Flow rate at node $k$ and time $l$ $[cm \cdot s^{-1}]$}.
+\end{align}
+
+The upwind in space approach is used to maintain numerical stability \cite{advecbook}.
+This is investigated more thoroughly in Section \ref{sec:CFL}, which investigates the sensitivity of the solution to the Courant number, given in Equation \eqref{eq:num-stab} as:
+\begin{equation}
+    C = \frac{\Delta t \nu}{\Delta z},
+\label{eq:num-stab}
+\end{equation}
+where
+\begin{align}
+    \Delta t &= \text{time step $[s]$} \nonumber \\
+    \Delta z &= \text{spatial grid size $[cm]$}. 
+\end{align}
+This is important as it is used for the Courant–Friedrichs–Lewy condition, where the Courant number, $C$, must be less than or equal to 1 for the explicit finite differencing scheme presented in this work.
+Equation \eqref{eq:num-stab} shows that, as the spatial mesh, $\Delta z$, becomes finer or the flow rate, $\nu$, becomes larger, the time step, $\Delta t$, must become smaller, which means higher computational cost.
+This is because a smaller time step becomes necessary to capture the effects spatially when the fluid moves faster through a spatial region $\Delta z$.
+
+\begin{comment}
+While any number of nuclides can be included in the decay chain, the computational cost will increase directly with the net number of nuclides, $i_{net}$.
+Additionally, the cost scales with the time step, though the time step is directly limited by the CFL condition in Equation \eqref{eq:num-stab}.
+This is investigated more thoroughly in Section \ref{sec:CFL}.
+\end{comment}
+
+\begin{comment}
+The approach selected to solve this problem requires an approach which does not lead to large numerical diffusion, as capturing spatial effects accurately is important.
+One approach which enables large time steps while still giving an accurate solution without large numerical diffusion is the Semi-Lagrangian method \cite{bates1982multiply}.
+This approach is similar to finite differencing, but rather than using neighboring spatial node concentrations, it uses interpolation to model the concentration being fed into the node.
+The interpolation used in this work is a piecewise cubic hermite interpolating polynomial from SciPy \cite{fritsch1984method}.
+This is given as:
+\begin{equation}
+    N_{i, k}^{(l+1)} = \frac{N_{i, j \rightarrow k}^{(l)} + \Delta t S_{i, k}^{(l)}}{1 + \Delta t \mu_{i, k}^{(l)}},
+\end{equation}
+where
+\begin{align}
+    N_{i, k}^{(l+1)} &= \text{concentration of nuclide $i$ at time $l+1$ and node $k$ $[atoms \cdot cm^{-3}]$} \nonumber \\
+    N_{i, j \rightarrow k}^{(l)} &= \text{concentration of nuclide $i$ at time $l$ and node $j$ advecting to $k$ $[atoms \cdot cm^{-3}]$} \nonumber \\
+    S_{i, k}^{(l)} &= \text{source term of nuclide $i$ at time $l$ for node $k$ $[atoms \cdot cm^{-3}]$} \nonumber \\
+    \mu_{i, k}^{(l)} &= \text{loss term of nuclide $i$ at time $l$ for node $k$ $[atoms \cdot cm^{-3}]$}.
+\end{align}
+
+Although large time steps can be used, it is still important to investigate how varying the relative time step affects the result.
+%This is because a smaller time step may be necessary to capture the effects spatially when the fluid moves faster through a spatial region $\Delta z$.
+This is investigated more thoroughly in Section \ref{sec:CFL}, though Equation \eqref{eq:num-stab} shows the equation for the Courant number, $C$, as:
+\begin{equation}
+    C = \frac{\Delta t \nu}{\Delta z},
+\label{eq:num-stab}
+\end{equation}
+where
+\begin{align}
+    \Delta t &= \text{time step $[s]$} \nonumber \\
+    \Delta z &= \text{spatial grid size $[cm]$}. 
+\end{align}
+This is important as it is used for the Courant–Friedrichs–Lewy condition.
+
+
+%Equation \eqref{eq:num-stab} shows that, as the spatial mesh, $\Delta z$, becomes finer or the flow rate, $\nu$, becomes larger, the time step, $\Delta t$, must become smaller, which means higher computational cost.
+%This is because a smaller time step becomes necessary to capture the effects spatially when the fluid moves faster through a spatial region $\Delta z$.
+%The algorithm solves the coupled system of PDEs is the manner shown in Algorithm \ref{alg:code}.
+%The $\lambda_{CFL}$ term can be used to provide more numerical stability by decreasing it below a value of 1, but this also increases the number of time steps required for the simulation.
+
+%With numerical stability and a coupled system of PDEs, the solution algorithm is as follows:
+
+%\begin{algorithm}
+%\caption{Solver Pseudocode}\label{alg:code}
+%\begin{algorithmic}
+%\While{$t < t_{final}$}
+%    \While{$i \leq i_{net}$}
+%        \State $S_i \gets S_{i, new}$
+%        \State $\mu_i \gets \mu_{i, new}$
+%        \State $N_i \gets N_{i, new}$
+%        \State $i \gets i + 1$
+%    \EndWhile
+%    \State $t \gets t + \Delta t$
+%\EndWhile
+%\end{algorithmic}
+%\end{algorithm}
+
+%While any number of nuclides can be included in the decay chain, the computational cost will increase directly with the net number of nuclides, $i_{net}$.
+%Additionally, the cost scales with the time step, though the time step is directly limited by the CFL condition in Equation \eqref{eq:num-stab}.
+%The time step can be made larger by using larger spatial steps at the cost of spatial resolution.
+%The algorithm updates the source terms, $S_i$ representing the production of each nuclide $i$ before each subsequent concentration update, $N_i$, as the decay parents contribute as a source term for nuclide $i$.
+%The algorithm updates the loss rates, $\mu_i$, of each nuclide $i$ as well, which is not necessary assuming constant flux and cross sections;
+%however, for power transients, changes occur to the fission source term and the loss term.
+\end{comment}
+
+\subsection{Evaluation Criteria}
+\label{sec:eval-crit}
+
+The spatially resolved model provides a concentration profile at each point in time, while the scaled flux model provides a single concentration for each nuclide at each point in time.
+By comparing Equation \eqref{eq:gen-form-ode} and \eqref{eq:gen-form}, it becomes noticeable that, aside from the spatial dependence, the main difference is the existence of the advection term.
+As the advection term goes to zero, which could happen by the linear flow rate or the concentration gradient going to zero, then the equations closely resemble each other.
+In such a case, when Equation \eqref{eq:gen-form} is integrated over space, then the equations are equal.
+
+Based on this observation, the metric selected to observe is the difference of each nuclide, given in Equation \eqref{eq:diffeq} as:
+\begin{equation}
+    d_i(t) = \left| \frac{\bar{N}_{1D, i}(t) - N_{0D, i}(t)}{\bar{N}_{1D, i}(t)} \right|,
+    \label{eq:diffeq}
+\end{equation}
+where
+\begin{align}
+    d_i(t) &= \text{Difference metric [-]} \nonumber \\
+    \bar{N}_{1D, i}(t) &= \text{Spatially averaged spatially resolved model concentration of nuclide $i$ $[atoms \cdot cm^{-3}]$} \nonumber \\
+    N_{0D, i}(t) &= \text{Scaled or unscaled flux model concentration of nuclide $i$ $[atoms \cdot cm^{-3}]$}.
+\end{align}
+
+When the difference metric approaches zero, that means that the perfect mixing model and the no mixing model give the same result.
+If the difference metric is non-zero, that means that the spatially resolved model has a non-zero result for the advection term.
+For any intermediate scenario, such as inclusion of diffusion or turbulent mixing, the result can be expected to lie somewhere between the perfect mixing and no mixing results.
+Thus, the larger the difference metric, the greater the thermal-hydraulic modeling impact will be for that specific problem.
+
+\section{Results}
+
+The results for this work include various sensitivity studies, a comparison between spatially resolved and spatially unresolved approaches, validation, and code-to-code benchmarking.
+Most of the results focus on $^{135}$Xe, though the validation uses $^{95}$Nb and $^{95}$Zr.
+$^{135}$Xe is selected for the sensitivity studies for several reasons: it has a large parasitic absorption cross section, which makes it likely to have a larger spatial dependence than other nuclides; it is important for modeling reactor behavior due to its high absorption cross section, which means evaluating it is useful; and it has a non-zero chemical removal rate, which means the chemical removal rate sensitivity can be compared with removal rates from the literature.
+
+%An example of the decay chain of the 135 isobar leading to \ce{ ^{135}Xe } with six nuclides is shown in Figure \ref{fig:decchain} from \cite{decaychain}.
+%This figure demonstrates how the concentration of each nuclide can affect source terms of the others below it in the decay chain.
+
+%\begin{figure}[!ht]
+%    \centering
+%    \includegraphics[scale=0.4]{images/135-isobar.PNG}
+%    \caption{Decay chain of the 135 isobar with six nuclides leading to \ce{ ^{135}Xe } from \cite{decaychain}.}
+%    \label{fig:decchain}
+%\end{figure}
+
+\subsection{Spatial Sensitivity}
+\label{sec:spatsens}
+
+The spatial sensitivity study informs the other analyses what level of spatial resolution is required to generate sufficiently accurate results.
+The time stepping sensitivity is built-in with this study, as a finer spatial mesh also requires a finer time stepping scheme due to preserving a constant Courant number of 0.5, as shown in Equation \eqref{eq:num-stab}.
+%The spatial sensitivity analysis is useful because a sufficiently fine spatial mesh is desired for accuracy, but an excessively fine mesh will waste computational resources.
+This analysis compares the concentration of $^{135}$Xe after one hour in the MSRE using the spatially resolved PDE method for various numbers of spatial nodes.
+%Figure \ref{fig:spat-ref} shows how the number of spatial nodes affects the results over one hour, while Table \ref{tab:spat-ref} provides details on the cost and accuracy of each simulation. 
+Table \ref{tab:spat-ref} provides details on the cost and accuracy of each simulation. 
+
+%This is because a finer spatial mesh also requires a finer time stepping scheme, as shown in Equation \eqref{eq:num-stab}.
+
+%For inaccuracy less than 0.01\%, 100 spatial nodes works well while offering a  computational cost.
+%Compared to the result for 500 nodes, the two node solution differs by 24.7\%, while the five node solution differs by 10.2\%.
+%The ten node solution is better, differing by only 4.39\%, while the 100 node solution is still better with a difference of 0.005\%.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Spatial sensitivity detailing how cost and accuracy vary based on the number of spatial nodes for $^{135}$Xe with a single tracked nuclide and a Courant number of 0.5 over one hour in the MSRE.}
+    \begin{tabular}{r r r}
+       \hline
+       Nodes  & Cost $[s]$ & Error [$\%$]\\
+       \hline
+    50 & 0.28 & 1.81 \\
+    100 & 0.84 & 1.26 \\
+    200 & 2.76 & 0.82 \\
+    500 & 16.03 & 0.11 \\
+    1000 & 60.71 & 0.06 \\
+    2000 & 224.43 & 0.01 \\
+    4000 & 884.60 & - \\
+        \hline
+    \end{tabular}
+    \label{tab:spat-ref}
+\end{table}
+
+%\begin{figure}[!ht]
+%    \centering
+%    \includegraphics[width=0.45\linewidth]{images/spatial_refinement_0_avg.png}
+%    \caption{Spatial sensitivity analysis on \ce{ ^{135}Xe } with five nuclides over one hour using the spatially resolved method.}
+%    \label{fig:spat-ref}
+%\end{figure}
+
+%Using 100 spatial nodes offers a small inaccuracy less than 0.01\% while keeping computational cost reasonably low.
+The computational cost scales approximately as $O(n^2)$ with the number of spatial nodes, $n$.
+Based on these results, to ensure that any small difference metric values are detectable, 500 nodes are used.
+This necessitates an increased computational cost, but allows for analysis of differences with uncertainty of approximately 0.1\%.
+%The spatial sensitivity study shows that 200 spatial nodes offers a high level of accuracy with a reasonable computational cost.
+%The chain sensitivity and spatial comparison studies use 200 spatial nodes, while the other simulations use 100 spatial nodes.
+%Based on the results from the spatial sensitivity study, 200 spatial nodes are used for the chain sensitivity and spatial comparison studies.
+%The MSRE validation uses 100 spatial nodes instead to keep computational cost lower due to the larger simulation time while maintaining accuracy of approximately 1\%.
+
+\subsection{Chain Sensitivity}
+
+The chain sensitivity study informs the other analyses what number of nuclides to include in the decay chain.
+%The next sensitivity study of interest is in the number of nuclides to include in the decay chain.
+This study compares the calculated $^{135}$Xe concentration after one hour for various numbers of decay parents for $^{135}$Xe included in the decay chain.
+Table \ref{tab:nuc-ref} shows how varying the number of decay parents for $^{135}$Xe in the isobar affects the results and simulation time.
+%A large cost is associated with moving from one nuclide to two, but the accuracy trade-off is well worth increasing the number of nuclides.
+
+
+%\begin{figure}[!ht]
+%    \centering
+%    \includegraphics[width=0.45\linewidth]{images/nuclide_refinement_0_avg.png}
+%    \caption{Nuclide sensitivity analysis on \ce{ ^{135}Xe } over one hour using 200 spatial nodes averaged spatially.}
+%    \label{fig:nuc-ref}
+%\end{figure}
+
+\begin{table}[!ht]
+    \centering
+    \caption{Chain sensitivity detailing how cost and accuracy vary based on the number of nuclides for $^{135}$Xe with 500 spatial nodes and a Courant number of 0.5 over one hour in the MSRE.}
+    \begin{tabular}{c c r}
+       \hline
+       Nuclides  & Cost $[s]$ & Error [$\%$]\\
+       \hline
+        Xe & 14.17 & 84.07\\
+        Xe, $^{m}$Xe & 28.85 & 58.39\\
+        Xe, $^{m}$Xe, I & 42.56 & 31.75\\
+        Xe, $^{m}$Xe, I, Te & 58.49 & 1.08\\
+        Xe, $^{m}$Xe, I, Te, Sb & 74.03 & 0.00\\
+        Xe, $^{m}$Xe, I, Te, Sb, Sn & 83.63 & -\\
+        \hline
+    \end{tabular}
+
+    \label{tab:nuc-ref}
+\end{table}
+
+The cost scales as $O(n)$ for $n$ nuclides.
+Five and six nuclides have the same error because $^{135}$Sn does not decay into $^{135}$Sb in the OpenMC chain file used, so not including $^{135}$Sn yields the same result.
+The expected contribution of $^{135}$Sn is small regardless, so the error would also be small if it were included.
+%Figure \ref{fig:nuc-ref} shows what the concentrations look like as a function of time for each varying number of nuclides.
+Using five nuclides in the 135 isobar leading to $^{135}$Xe yields accurate results, so this number of nuclides is used for the other $^{135}$Xe analyses.
+For other analyses not using $^{135}$Xe, since the nuclide cost scaling is only linear, six nuclides are used for $^{95}$Zr and seven for $^{95}$Nb.
+
+\subsection{Courant Number Sensitivity}
+\label{sec:CFL}
+This sensitivity study investigates the time step size represented by the Courant, or CFL, number.
+A constant flow rate is used, as well as a constant number of nodes as described in Section \ref{sec:spatsens}.
+There are two different studies used to evaluate varying the value of the Courant number.
+The first is a one minute MSRE simulation with 500 spatial nodes and 5 nuclides leading to $^{135}$Xe.
+The results of this study are shown in Table \ref{tab:courantmin}.
+The results in this table show that the cost scales approximately as O($n$), where $n$ is the number of time steps.
+Beyond a Courant number of 1.0, the solution becomes non-physical.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Courant number sensitivity study on the concentration of $^{135}$Xe in the MSRE based on the time step size used with 500 spatial nodes over the course of one minute.}
+    \begin{tabular}{l r r r}
+    \hline
+Courant Number & Time Steps & Cost [s] & Error [\%] \\
+\hline
+1.0 & 2994 &1.59 & 0.44 \\
+0.9 & 3327 & 1.77 & 0.48 \\
+0.8 & 3743 & 1.98 & 0.31 \\
+0.7 & 4278 & 2.27 & 0.38 \\
+0.6 & 4990 & 2.65 & 0.17 \\
+0.5 & 5988 & 3.19 & 0.28 \\
+0.4 & 7484 & 4.22 & 0.17 \\
+0.3 & 9980 & 5.65 & 0.07 \\
+0.2 & 14970 & 8.02 & 0.03 \\
+0.1 & 29940 & 16.03 & - \\
+\hline
+    \end{tabular}
+    \label{tab:courantmin}
+\end{table}
+
+The next study to investigate is a longer, one hour MSRE simulation with the other parameters unchanged from the previous study.
+The results of this study are shown in Table \ref{tab:couranthour}.
+The Courant number changes between these studies because the time step is calculated by dividing the increased total time by the unchanged number of time steps.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Courant number sensitivity study on the concentration of $^{135}$Xe in the MSRE based on the time step size used with 500 spatial nodes  over the course of one hour.}
+    \begin{tabular}{l r r r}
+    \hline
+Courant Number & Time Steps & Cost [s] & Error [\%] \\
+\hline
+1.0 & 179640 & 95.26 & 0.0084 \\
+0.9 & 199600 & 107.23 & 0.0075 \\
+0.8 & 224550 & 119.41 & 0.0066 \\
+0.7 & 256629 & 136.23 & 0.0112 \\
+0.6 & 299400 & 160.56 & 0.0047 \\
+0.5 & 359280 & 196.97 & 0.0037 \\
+0.4 & 449100 & 254.26 & 0.0028 \\
+0.3 & 598800 & 332.39 & 0.0019 \\
+0.2 & 898200 & 477.75 & 0.0009 \\
+0.1 & 1796400 & 956.84 & - \\
+\hline
+    \end{tabular}
+    \label{tab:couranthour}
+\end{table}
+
+\begin{comment}
+The final study is a one day simulation of the MSRE.
+The results of this study are shown in Table \ref{tab:courantday}.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Sensitivity study on the concentration of $^{135}$Xe in the MSRE based on the time step size used with 500 spatial nodes  over the course of one hour.}
+    \begin{tabular}{r r r r}
+    \hline
+Time Steps & Courant Number & Cost [s] & Error [\%] \\
+\hline
+5 & 1977291.98 & 0.02 & 100.00 \\
+50 & 197729.20 & 0.19 & 100.00 \\
+500 & 19772.92  & 1.74 & 16.81 \\
+5000 & 1977.29  & 17.96 & 1.52 \\
+50000 & 197.73  & 179.30 & 0.14 \\
+500000 & 19.77 & 1737.44 & -\\
+\hline
+    \end{tabular}
+    \label{tab:courantday}
+\end{table}
+\end{comment}
+
+
+From these studies, the error seems to somewhat follow the number of time steps and depends less on the Courant number, though the trend is not monotonic.
+There also appears to be an inverse correlation of the net simulation time with the error for a given number of time steps, as the error for a one hour simulation was lower in comparison to all the one minute simulations with the same Courant number.
+%This means that a simulation of a longer period of time can be expected to be more efficient in terms of simulating more time per unit of wall time.
+
+These trends are understood more clearly when investigating the effect of varying the Courant number on the simulation.
+The non-monotonic variation in error with varying Courant number arises from the competing influences of numerical diffusion and phase accuracy introduced by changes in the time step.
+The phase of the low Courant number result is more accurate while the diffusion of the high Courant number result is more accurate.
+However, the phase of the low Courant number can be fixed by adjusting the advection rate, which is demonstrated in Figure \ref{fig:Courant-compare}.
+
+\begin{figure}[!ht]
+\def\tabularxcolumn#1{m{#1}}
+
+\begin{tabularx}{\linewidth}{@{}cXX@{}}
+
+\begin{tabular}{cc}
+\subfloat[Courant number of 0.1]{\includegraphics[width=0.45\linewidth]{images/testcase-CFL0.1.png}} & 
+\subfloat[Courant number of 1.0]{\includegraphics[width=0.45\linewidth]{images/testcase-CFL1.png}}\\
+\end{tabular}
+\end{tabularx}
+\caption{Concentration for a simple test case in a 100 $cm$ long channel with a flow rate of 10 $cm/s$ after 5 minutes with no source or loss terms and an initial concentration in the first 50\% of the loop.}\label{fig:Courant-compare}
+\end{figure}
+
+
+Based on this analysis, the Courant number should be selected based on the desired behavior, particularly since the effect on the percent difference is less than half a percent for all studied cases.
+Because the evaluation criteria depends on the spatial gradient, preserving the sharpness of the gradient is deemed to be the most important.
+This means a Courant number of one is optimal for the analyses studied.
+Additionally, the phase shift can be corrected in a straightforward manner by adjusting the advection rate.
+For this work, the advection speed was found to be most accurate when multiplied by a factor of 1.002 for each case studied.
+%There is still a slight phase shift on the first pass through the loop, but each subsequent recirculation has the expected phase.
+
+%Based on the results of this sensitivity study, 50000 time steps are sufficient for the simulations presented in this work to have errors less than 1\%.
+
+\subsection{Validation and Code-to-Code Benchmarking}
+
+This work uses the experimentally measured MSRE ladle salt samples over time during uranium-235 operation for validation \cite{compere1975fission}.
+The validation uses concentrations for $^{95}$Zr and $^{95}$Nb during operation in the MSRE from January 24th, 1966 to November 7th, 1967.
+$^{95}$Zr is a salt-seeking nuclide without an appreciable noble gas precursor, which means it can be modeled without having to account for chemical removal.
+The $^{95}$Nb acts like a noble metal in the fuel salt, so it has some chemical removal rate due to plate-out in the heat exchanger.
+However, fully understanding the behavior of $^{95}$Nb from the existing data is challenging \cite{cheng2021distribution}.
+For this benchmark, no chemical removal is included, though there are rates that exist in the literature for modeling removal from the fuel salt to the cover gas in the pump bowl \cite{shahbazi2024modeling}.
+%As discussed previously, the scaled flux method is sufficient for modeling the spatially resolved depletion without chemical removal.
+%Not only is there a spatial component that does not need to be modeled, but the spatial resolution is also not required.
+%This means only the decay chain sensitivity needs to be included, which has linear scaling.
+
+%For analyzing the noble metal \ce{ ^{95}Nb }, this work considers chemical removal in the ex-core region.
+%The chemical removal rate used for \ce{ ^{95}Nb } in this work is the value from Shahbazi et al.\ of $2.3 \times 10^{-8} s^{-1}$ \cite{shahbazi2024modeling}.
+%This value accounts for the removal of elements from the fuel salt to the cover gas in the pump bowl.
+%This removal rate is small because it is meant to only represent the removal of niobium from the salt to the off-gas system and does not include removal via deposition throughout the primary loop.
+%Therefore, because it is small relative to the decay constant, the scaled flux method is sufficient for modeling both the \ce{ ^{95}Zr } and \ce{ ^{95}Nb } concentrations.
+Figure \ref{fig:zr95-compare} shows the concentrations of $^{95}$Zr and $^{95}$Nb over time.
+%The concentrations of \ce{ ^{95}Zr } and \ce{ ^{95}Nb } over time is given in Figure \ref{fig:zr95-compare}.
+%The concentration of \ce{ ^{95}Zr } as a function of time is given in Figure \ref{fig:zr95-compare}.
+In the figure, comparisons are made between the experimental results of the MSRE \cite{compere1975fission}, analysis using MCNP/ADDER \cite{fei_validation_2022}, and the current work using the spatially resolved and scaled flux models.
+There appears to be reasonable agreement between the current work and the results from MCNP/ADDER.
+This agreement shows that the six to seven nuclides are sufficient to get a reasonable concentration for a specific target nuclide compared to a full depletion matrix.
+%This agreement is useful for demonstrating how, even though the spatially resolved and scaled flux models only model six to seven nuclides, there is good agreement with MCNP/ADDER which uses a full depletion chain.
+
+
+%Because this removal rate is small relative to the decay, the scaled flux method is sufficient for modeling both the \ce{ ^{95}Zr } and \ce{ ^{95}Nb } concentrations.
+
+%The scaled flux simulation takes 70 seconds to run, while the spatially resolved form with two spatial nodes takes 234 seconds.
+%Based on the scaling of spatial nodes previously discussed, this means having an accurate spatially resolved solution with 100 nodes takes roughly 100 hours of compute time.
+%Using 50 nodes would reduce this time to about 25 hours, which is still significant when compared to the scaled flux method.
+
+
+
+
+
+%\begin{figure}[!ht]
+%    \centering
+%    \includegraphics[width=0.45\linewidth]{images/experimental_Zr95.png}
+%    \caption{Concentration of \ce{ ^{95}Zr } over time in the Molten Salt Reactor Experiment.}
+%    \label{fig:zr95-compare}
+%\end{figure}
+
+\begin{figure}[!ht]
+\def\tabularxcolumn#1{m{#1}}
+
+\begin{tabularx}{\linewidth}{@{}cXX@{}}
+
+\begin{tabular}{cc}
+\subfloat[$^{95}$Zr concentration]{\includegraphics[width=0.45\linewidth]{images/experimental_Zr95.png}} & 
+\subfloat[$^{95}$Nb concentration]{\includegraphics[width=0.45\linewidth]{images/experimental_Nb95.png}}\\
+\end{tabular}
+\end{tabularx}
+\caption{Concentrations over time in the Molten Salt Reactor Experiment with no chemical removal.}\label{fig:zr95-compare}
+\end{figure}
+
+
+
+However, the MSRE experimental data does not agree at each point, particularly for $^{95}$Nb.
+The lack of agreement for $^{95}$Zr and $^{95}$Nb can be explained by uncertainty in the measurements, chemical effects which aren't modeled in MCNP/ADDER or this work, and other minor contributing factors these models do not include.
+Particularly, the $^{95}$Nb concentrations from the MSRE measurements are smaller than the model predicts, which means that a non-zero chemical removal rate would likely fit these data better.
+
+%Ruthenium-106 has a half life near one year, has a non-zero chemical removal, and has decay parents which also have non-zero chemical removal terms.
+%Specifically, using the data from Shahbazi et al.\, there is a ruthenium removal rate of $3.29 \times 10^{-8} s^{-1}$, a technetium removal rate of $1.61 \times 10^{-3} s^{-1}$, and a molybdenum removal rate of $2.19 \times 10^{-7} s^{-1}$.
+
+Comparison between $^{135}$Xe chain concentrations are made with a steady-state radiochemical transport model for additional code-to-code benchmarking \cite{shahbazi_steady-state_2022}.
+Two variations are compared, one with nine regions and one with two regions, shown in Table \ref{tab:mortycompare}.
+The input data for the steady-state radiochemical model was slightly modified to match Table \ref{tab:sim-params}.
+However, one difference that is likely to lead to discrepancies is the treatment of $^{135m}$Xe.
+In this work, the source of meta-stable xenon includes an independent fission yield and from decay of iodine.
+In the steady-state radiochemical transport model, a cumulative fission yield was used instead of tracking the decay of iodine into metastable xenon.
+
+\begin{table}[H]
+    \centering
+    \caption{Spatially averaged equilibrium concentrations in the MSRE determined after three days with constant power for the time-dependent simulations via code-to-code benchmarking with steady-state model \cite{shahbazi_steady-state_2022}.}
+    \begin{tabular}{lrlr}
+    \hline
+    Method & Nuclide & $N_{i}$ $[atoms \cdot cm^{-3}]$ & $d_i$ [\%]\\
+    \hline
+    Spatially Resolved & $^{135}$Xe & $2.69 \times 10^{14}$ & - \\
+    Scaled Flux & $^{135}$Xe & $2.69 \times 10^{14}$ & 0.0 \\
+    Two Region \cite{shahbazi_steady-state_2022} & $^{135}$Xe & $3.16 \times 10^{14}$ & 17.3 \\
+    Nine Region \cite{shahbazi_steady-state_2022} & $^{135}$Xe & $2.58 \times 10^{14}$ & 4.1 \\
+    Spatially Resolved & $^{135m}$Xe & $1.81 \times 10^{12}$ & - \\
+    Scaled Flux & $^{135m}$Xe & $1.81 \times 10^{12}$ & 0.0 \\
+    Two Region \cite{shahbazi_steady-state_2022} & $^{135m}$Xe & $1.55 \times 10^{12}$ & 14.1 \\
+    Nine Region \cite{shahbazi_steady-state_2022} & $^{135m}$Xe & $1.57 \times 10^{12}$ & 13.4 \\
+    Spatially Resolved & $^{135}$I & $2.41 \times 10^{14}$ & - \\
+    Scaled Flux & $^{135}$I & $2.41 \times 10^{14}$ & 0.0 \\
+    Two Region \cite{shahbazi_steady-state_2022} & $^{135}$I & $2.65 \times 10^{14}$ & 9.7 \\
+    Nine Region \cite{shahbazi_steady-state_2022} & $^{135}$I & $2.35 \times 10^{14}$ & 2.5 \\
+    Spatially Resolved & $^{135}$Te & $1.04 \times 10^{11}$ & - \\
+    Scaled Flux & $^{135}$Te & $1.04 \times 10^{11}$ & 0.0 \\
+    Two Region \cite{shahbazi_steady-state_2022} & $^{135}$Te & $9.22 \times 10^{10}$ & 11.0 \\
+    Nine Region \cite{shahbazi_steady-state_2022} & $^{135}$Te & $9.59 \times 10^{10}$ & 7.5 \\
+    Spatially Resolved & $^{135}$Sb & $3.97 \times 10^{8}$ & - \\
+    Scaled Flux & $^{135}$Sb & $3.97 \times 10^{8}$ & 0.0 \\
+    Two Region \cite{shahbazi_steady-state_2022} & $^{135}$Sb & $3.69 \times 10^{8}$ & 7.1 \\
+    Nine Region \cite{shahbazi_steady-state_2022} & $^{135}$Sb & $3.83 \times 10^{8}$ & 3.7 \\
+    \hline
+    \end{tabular}
+    \label{tab:mortycompare}
+\end{table}
+
+Table \ref{tab:mortycompare} shows that there is good agreement between the spatially resolved model and scaled flux model for all nuclides tracked, with the largest difference being approximately $10^{-3}\%$ for $^{135}$Xe.
+When comparing with the two and nine region models, in every case the nine region model has a smaller difference.
+This is likely because the level of spatial refinement is finer in the nine region case, which brings it closer to the more spatially refined model presented in this work.
+In the nine region model, $^{135}$Sb is 3.7\% smaller, $^{135}$Te is 7.5\% smaller, $^{135}$I is 2.5\% smaller, $^{135m}$Xe is 13.4\% smaller, and $^{135}$Xe is 4.1\% smaller.
+In the two region model, $^{135}$Sb is 7.1\% smaller, $^{135}$Te is 11\% smaller, $^{135}$I is 9.7\% larger, $^{135m}$Xe is 14.1\% smaller, and $^{135}$Xe is 17.3\% larger.
+Overall, there is reasonable agreement between the steady-state models and the current time-dependent models.
+The larger differences in $^{135m}$Xe are expected, and the other nine region results are within 10\%.
+
+\subsection{Difference Sensitivities}
+
+Based on Equations \eqref{eq:gen-form-ode} and \eqref{eq:gen-form}, the difference metric described in Section \ref{sec:eval-crit} can be manipulated by altering the source term, $S_i$; loss term, $\mu_i$; and flow rate, $\nu$.
+If the manipulations designed to lead to large differences result in a negligible difference, then that would prove that those scenarios, or any more conservative scenarios, do not require spatial resolution.
+In this work, artificial manipulation of nuclear data, such as fission yields or branching ratios, will not be considered.
+Instead, manipulations will be performed on properties which can be more readily controlled: the neutron flux, the chemical removal rate, and the fuel salt flow rate.
+\FloatBarrier
+
+\subsubsection{Flux Sensitivity}
+
+To create a gradient in the concentration through flux manipulation, the most direct way is through power oscillations in time.
+Specifically, a square wave can be used such that a certain portion of the fuel salt is irradiated at a high flux while another portion of fuel salt receives no irradiation.
+This represents the most extreme case of a spatial gradient which can be formed using flux variations.
+Since a realistic model would have some amount of mixing and a lesser amount of power oscillation, this provides a limiting case.
+If the difference metric is close to zero, then that would indicate that for power oscillation scenarios, spatial resolution is generally not necessary.
+A maximum difference less than 1\% over tens of circulations around the primary loop would indicate that, with mixing, any realistic molten salt reactor could have power oscillations modeled during a depletion simulation without spatial resolution.
+
+To simplify the problem, the data is adjusted to a flow rate of 10 $cm/s$ over 100 $cm$, with 50\% of the salt in-core and 50\% ex-core.
+Figure \ref{fig:surfplot} shows how the concentration evolves over time.
+This figure normalizes the concentration at each time step by the peak concentration at that time step.
+This leads to the diagonal striping effect, as the peak concentration advects throughout the primary loop.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/surf_0.png}
+    \caption{Relative maximum concentration at each time step of $^{135}$Xe in a toy model with 5 second in-core and ex-core residence times and a square wave power oscillation.}
+    \label{fig:surfplot}
+\end{figure}
+
+Figure \ref{fig:fluxtimecompare} shows how the difference metric evolves over both tens and thousands of recirculations for $^{135}$Xe.
+The five minute long simulation is sufficiently short such that the step-wise shape from the power oscillation is visible in the difference evolution via a shape with distinct steps down after each recirculation.
+As the fuel circulates over the first five minutes, the staircase shape trends linearly downwards, though the flat section of each portion begins to become an upwards trend.
+The reason for this is because of the diffusion-inducing behavior of the precursors to $^{135}$Xe.
+Because these other nuclides decay into $^{135}$Xe at different locations, the large gradient caused by the power oscillations becomes lessened.
+When modeled with only a single nuclide, the general trend is the same but without positive slopes.
+
+\begin{figure}[!ht]
+\def\tabularxcolumn#1{m{#1}}
+
+\begin{tabularx}{\linewidth}{@{}cXX@{}}
+
+\begin{tabular}{cc}
+\subfloat[5 minutes - 30 recirculations]{\includegraphics[width=0.45\linewidth]{images/flux-5nuc.png}} & 
+\subfloat[1 day - 8640 recirculations]{\includegraphics[width=0.45\linewidth]{images/flux-1day-5nuc.png}}\\
+\end{tabular}
+\end{tabularx}
+\caption{$^{135}$Xe difference metrics in a toy model with 5 second in-core and ex-core residence times over different periods of time.}\label{fig:fluxtimecompare}
+\end{figure}
+
+These results show that it takes approximately 5 hours, or approximately 15,000 circulations around the primary loop, before the difference metric reaches 1\%.
+This means that, provided there is some small amount of mixing via turbulence or diffusion, the scaled flux method is sufficiently accurate to model the $^{135}$Xe in the MSRE.
+In the case that there is no mixing, or the level of mixing is negligible, then a spatially resolved approach may be necessary if there are power oscillations which occur at such a frequency that leads to heterogeneity in the fuel salt.
+\FloatBarrier
+
+\subsubsection{Chemical Removal Sensitivity}
+
+In this work, the chemical removal is applied on each spatial node that exists in the ex-core region.
+The xenon chemical removal rate from the pump bowl via the off-gas system in the MSRE has been estimated in studies to be $4.067 \times 10^{-5}$ $s^{-1}$ \cite{lo2022application}.
+Similarly for the Molten Salt Breeder Reactor (MSBR), the chemical removal rate of xenon has been estimated to be $0.05$ $s^{-1}$ \cite{robertson1971conceptual}.
+The scenario in which the largest spatial gradient would exist is one with a very large chemical removal rate in the ex-core region.
+A large chemical removal rate leads to the largest spatial gradient because as the chemical removal rate goes to infinity, the concentration would rapidly approach 0 in that region.
+
+Figure \ref{fig:removalerr} shows how the difference metric of $^{135}$Xe evolves over time and with varying removal rate.
+The difference rate has a sinusoidal shape that exponentially decays, with a peak difference early on and than reaching an equilibrium difference.
+The peak and equilibrium differences are plotted for varying removal rate values of xenon.
+
+Based on the xenon removal rate in the MSRE of $4.067 \times 10^{-5}$ $s^{-1}$, the difference metric is negligible, meaning the scaled flux model can be used with high accuracy.
+For the xenon removal rate in the MSBR of $0.05$ $s^{-1}$, the difference peaks at 7.5\% and is at equilibrium at 0.9\%.
+This means that the MSBR, or reactors with similar large removal rates, may need spatial resolution during depletion simulations to accurately model nuclide concentrations.
+
+\begin{figure}[!ht]
+\def\tabularxcolumn#1{m{#1}}
+
+\begin{tabularx}{\linewidth}{@{}cXX@{}}
+
+\begin{tabular}{cc}
+\subfloat[Difference metric with no chemical removal with peak and equilibrium marked]{\includegraphics[width=0.45\linewidth]{images/0chem-diff.png}} & 
+\subfloat[Peak and equilibrium difference metrics for various chemical removal rates]{\includegraphics[width=0.45\linewidth]{images/removal_err.png}}\\
+\end{tabular}
+\end{tabularx}
+\caption{$^{135}$Xe chemical removal rate difference metrics in the MSRE.}\label{fig:removalerr}
+\end{figure}
+\FloatBarrier
+
+\subsubsection{Flow Rate Sensitivity}
+
+The flow rate is inversely proportional to the residence time of the salt in a given region.
+A faster flow rate, or shorter residence time in each region, is expected to lead to a smaller difference.
+This is because the salt would be more evenly irradiated, leading to a more homogeneous salt.
+As the residence time increases, the spatial gradient is expected to increase.
+
+However, as can be seen in Equation \eqref{eq:gen-form}, the gradient is multiplied by the flow rate.
+This means that there can be expected to be competing behavior from these terms.
+For a stationary fuel salt, the scaled flux model would no longer be correctly handling the physics, as the system is stationary and would be better modeled by the unscaled flux method.
+This means that, even with competing behavior, the trend should be towards an increase in the difference metric with decreasing flow rate.
+%This means that there is likely some transition where the flow rate decreasing leads to a larger difference, especially for flow rates approaching zero.
+
+Figure \ref{fig:flowerr} shows how the difference metric for $^{135}$Xe changes for various residence times, calculated by dividing the length of the channel by the flow rate.
+The peak and equilibrium difference metrics both trend upwards as the residence time increases, which aligns with expectations.
+This means that for typical MSRE depletion simulations with a residence time of approximately 30 seconds, the scaled flux method has a difference metric less than 0.01\% due to fuel salt advection.
+However, if a pump coast-down or some other loss of flow condition is part of the simulation, then the simulation will require spatial resolution to properly model the $^{135}$Xe concentration.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/flow_scaled_err.png}
+    \caption{Peak and equilibrium difference metrics for various primary loop residence times in the MSRE for $^{135}$Xe.}
+    \label{fig:flowerr}
+\end{figure}
+
+
+
+\begin{comment}
+%\subsection{Spatial Comparison}
+
+The spatial comparison study compares the spatially resolved PDE to the scaled flux ODE method as well as the unscaled flux ODE method.
+%The next results of interest are a comparison of how this method compares with a spatially unresolved method.
+In particular, a comparison with the scaled flux method yields insights into the difference between a spatially resolved and spatially unresolved method \cite{betzler2021liquid}.
+
+
+After 1.25 days of constant power, there is a difference of $0.91\%$ when compared with the scaled flux method and $58.8\%$ when compared with the unscaled flux method.
+Without flux scaling, the difference is much larger because the in-core and ex-core regions are not treated with any sort of approximation.
+Instead, the entire fuel salt volume is assumed to be in-core, which leads to a poor prediction of the reactor behavior.
+The difference of $58.8\%$ is consistent with the difference of 44.24\% found by Tano et al.\ which compares the unscaled flux to a quasi-static approach over 1.25 days for $^{135}$Xe as well \cite{tanocoupled2023}.
+Although Tano et al.\ investigates a different reactor, the fundamental processes are similar, so a similar result is expected.
+%The difference found between this work and the Tano et al.\ work is likely due to the difference in the reactors, as Tano et al.\ investigate the MSFR while this work investigates the MSRE.
+
+A step increase in power demonstrates if the spatially resolved method may be necessary to adequately handle sudden changes in reactor conditions.
+The power increases by an order of magnitude after 1.25 days.
+%After 1.25 days of depletion, the power was increased by an order of magnitude.
+The percent difference for the scaled flux method decreases shortly after this power change to $0.3\%$.
+Figure \ref{fig:pcntdiff-norepr} shows this, as it compares the scaled flux and spatially resolved methods for the concentration of $^{135}$Xe.
+This figure also shows how the maximum relative difference in the xenon concentration changes over time, which correlates to the accuracy of the scaled flux method.
+The difference is initially large, leading to the initial peak in the percent difference; the relative difference and error both decrease and stabilize over time.
+After the power increase, the relative difference stabilizes quickly into a value an order of magnitude above the previous equilibrium value.
+The percent difference decreases after the power increase even though the relative concentration difference is at a slightly higher value.
+This is because the relative difference only gives a general estimate to the accuracy of the scaled flux method.
+From these results, the scaled flux method appears sufficient for modeling the concentrations of nuclides in MSRs even when there is a sudden increase in power.
+
+\begin{figure}[!ht]
+\def\tabularxcolumn#1{m{#1}}
+\begin{tabularx}{\linewidth}{@{}cXX@{}}
+%
+\begin{tabular}{cc}
+\subfloat[Maximum relative difference in concentration]{\includegraphics[width=0.45\linewidth]{images/test_run_0_gradient.png}} & 
+\subfloat[Percent difference in scaled flux concentration and average spatially resolved concentration]{\includegraphics[width=0.45\linewidth]{images/PDE_ODE_comparison_0_pcntdiff.png}}\\
+\end{tabular}
+\end{tabularx}
+
+\caption{An evaluation of the spatially resolved (PDE) method and the scaled flux spatially unresolved (ODE) method on the $^{135}$Xe concentration over time before and after an order of magnitude power increase.}\label{fig:pcntdiff-norepr}
+\end{figure}
+
+
+%when spatially resolved chemical removal is not considered.
+%The accuracy is affected much more significantly by the decay chain resolution than by using a fully spatially resolved method compared to the scaled flux method.
+%However, when chemical removal is included in the ex-core region, the difference between the spatially resolved PDE and the non-spatially resolved ODE becomes non-negligible.
+
+%Figure \ref{fig:pcntdiff-repr-20s} shows how the percent difference between the two methods compare with a xenon cycle time of 20 seconds, where xenon is removed from the ex-core region only.
+%When comparing the concentrations using both methods, there is an initial large difference which exponentially decreases to an steady-state difference between the two methods.
+
+%The difference peaks early on, but even as the values stabilize, there is a non-zero difference between the methods.
+
+%\begin{figure}[!ht]
+%    \centering
+%    \includegraphics[width=0.45\linewidth]{images/PDE_ODE_comparison_0_pcntdiff_xe20s.png}
+%    \caption{Percent difference between the spatially resolved and scaled flux methods with a xenon removal rate of 0.05 $s^{-1}$.}
+%    \label{fig:pcntdiff-repr-20s}
+%\end{figure}
+However, the difference between the spatially resolved PDE and the non-spatially resolved ODE becomes larger when there is chemical removal in the ex-core region.
+There is an initial large positive difference in the concentrations which exponentially decreases to a positive steady-state difference.
+Figure \ref{fig:inaccuracy-study} shows how varying the cycle time affects the inaccuracy of the scaled flux method with linear fits generated based on the data collected.
+%A further investigation into the effects of varying cycle times on the inaccuracy of the result while using the scaled flux method is provided in Table \ref{tab:inaccuracy-study}.
+The cycle time, $T_{cyc}$, describes the removal rate of xenon, for which a larger cycle time corresponds to a slower removal rate.
+Specifically, the removal rate, $\lambda_r$, is the inverse of the cycle time.
+For cases in which the removal rate is greater, the scaled flux method is less accurate than a spatially refined model.
+Figure \ref{fig:inaccuracy-study} represents this both by the peak difference as well as the final difference, which occurs as the difference approaches an equilibrium value.
+%The percent error for the peak increases by 145.7\% per 1$s^{-1}$ increase to the removal rate, while for the final error has increases by 30.8\% per 1$s^{-1}$.
+%The intercepts are at 1.15 for the peak and 0.912 for the final.
+
+%begin{table}[!ht]
+%    \centering
+%    \caption{The errors from using the scaled flux method to handle spatially resolved chemical removal for various% chemical removal rates of xenon.}
+%    \begin{tabular}{c|c|c}
+%       \hline
+%       Xenon $T_{cyc}$ $[s]$  & Peak Diff [$\%$] & Final Diff [$\%$]\\
+%       \hline
+%        10 & 15.76 & 4.10\\
+%        20 & 8.64 & 2.24\\
+%        40 & 4.92 & 1.71\\
+%        80 & 3.02 & 1.56\\
+%        \hline
+%    \end{tabular}
+%    \label{tab:inaccuracy-study}
+%\end{table}
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.45\linewidth]{images/removal_err.png}
+    \caption{The errors from using the scaled flux method to handle spatially resolved chemical removal for various chemical removal rates of xenon.}
+    \label{fig:inaccuracy-study}
+\end{figure}
+
+%Another consideration is if there is chemical removal for the other elements in the decay chain.
+To simulate chemical removal for the other elements in the decay chain, the cycle time of 20 seconds is applied to the elements in the 135 isobar chain leading to xenon.
+Table \ref{tab:multi-repr} shows the results of this study.
+%The results of this study are shown in Table \ref{tab:multi-repr}.
+
+\begin{table}[!ht]
+    \centering
+    \caption{The inaccuracies of using the scaled flux method to handle spatially resolved chemical removal for nuclides in the 135 isobar chain leading to xenon.}
+    \begin{tabular}{c c c}
+       \hline
+       Removed Elements & Peak Diff [$\%$] & Final Diff [$\%$]\\
+       \hline
+        - & 0.003 & 0.0\\
+        Xe & 7.5 & 2.0\\
+        Xe, I & 7.5 & 2.0\\
+        Xe, I, Te & 7.5 & 2.0\\
+        Xe, I, Te, Sb & 7.5 & 2.0\\
+        \hline
+    \end{tabular}
+
+    \label{tab:multi-repr}
+\end{table}
+%Spatial chemical removal is modeled as well for the same power pulse, and the same percent difference plot from Figure \ref{fig:pcntdiff-norepr} is recreated.
+%The chemical removal must be scaled as shown in Equation \eqref{eq:loss-/scaled}, but doing so allows for the spatial chemical removal and spatial depletion to be modeled with differences less than 0.01\%.
+%The chemical removal rate is set for a cycle time of twenty seconds for each nuclide in the chain, as well as for only xenon.
+%In both cases, the percent difference between the full spatial resolution and the scaled flux methods is less than 0.01\%.
+
+\end{comment}
+\FloatBarrier
+
+
+
+\section{Conclusions}
+This work compares a scaled flux model, which assumes perfect mixing, and a spatially resolved model with 1D advection, which assumes no mixing, to determine the maximum error that could be expected from using the scaled flux method.
+$^{135}$Xe was selected to be the main target of investigation as it has a large absorption cross section, and thus would be more affected by the spatial resolution than other nuclides. 
+The spatially resolved and scaled flux models offer close agreement with MCNP/ADDER, while the data from the MSRE for $^{95}$Zr is in reasonable agreement.
+
+The analyses in this work demonstrated the sensitivity of the difference between the scaled flux and spatially resolved models to flux, chemical removal rates, and flow rates.
+For the flux, in general, minor variations in the flux can be modeled using the scaled flux method.
+If the power is artificially oscillated to induce heterogeneity and the MSR has little to no mixing over an extended period of time, then the scaled flux method would no longer be sufficient.
+For chemical removal rates, small removal rates can be handled using the scaled flux method while large chemical removal rates, such as xenon in the MSBR, may require spatial resolution.
+For flow rates, the scaled flux method becomes increasingly inaccurate as the flow rate decreases.
+
+%The scaled flux method was demonstrated to be effective for modeling nuclide concentrations with small chemical removal rates, as the error scales linearly with increasing chemical removal rates.
+%The error in the scaled flux method scales linearly with the chemical removal rate.
+%When there is a spatially resolved chemical removal, the peak percent difference scales linearly with the inverse of the cycle time.
+%What this means practically is that most elements modeled in MSRs can be treated using the scaled flux method, while those with large chemical removal rates should be resolved spatially.
+Future work could involve continued verification and validation efforts for isotopes that exhibit in-core and ex-core loss terms due to neutron capture and chemical removal, respectively.
+Future work could also compare these methods to a modified-point-kinetics-like approach that treats the ex-core region with an exponential decay, offering an approach between the 0-D and 1-D approaches as shown in MacPhee \cite{macphee1958kinetics}.
+Finally, future work of interest could include investigation of depletion simulations of various MSRs in the literature and analysis on nuclide concentration difference metrics.
+
+%\printnomenclature
+%If variables are extensively used in the text, a Nomenclature section would be helpful to the reader.
+%\nomenclature{\(c\)}{Speed of light in a vacuum}
+%\nomenclature{\(h\)}{Planck constant}
+
+\pagebreak
+\section*{Acknowledgments}
+This material is based upon work supported under an Integrated University Program Graduate
+Fellowship.
+Any opinions, findings, conclusions or recommendations expressed in this publication are
+those of the author(s) and do not necessarily reflect the views of the Department of Energy
+Office of Nuclear Energy.
+Part of this work was funded by the Department of Energy’s National Nuclear Security Administration Office of International Nuclear Safeguards (NA-241) under the Advanced Reactor International Safeguards Engagement (ARISE) Program at Argonne National Laboratory (“Argonne”). Argonne, a U.S. Department of Energy Office of Science laboratory, is operated under Contract No. DE-AC02-06CH11357 by UChicago Argonne, LLC.
+Funding for this work was supported by the Department of Nuclear, Plasma and Radiological Engineering.
+
+\textbf{Luke Seifert}: Methodology, data curation, formal analysis, software, visualization, writing - original draft, writing - review and editing.
+\textbf{Shayan Shahbazi}: Conceptualization, methodology, resources, software, supervision, writing - review and editing.
+\textbf{Scott Richards}: Conceptualization, supervision.
+\textbf{Madicken Munk}: Supervision, funding acquisition, writing - review and editing.
+\textbf{Kathryn Huff}: Supervision, funding acquisition, writing - review and editing.
+Thanks to Samuel Dotson for review of the scripts used in this work and Nathan Ryan for review of this paper.
+Additional thanks to the University of Illinois Department of Nuclear, Plasma, and Radiological Engineering and the members of the Advanced Reactors and Fuel Cycles group for their support and suggestions in developing this work.
+
+
+\pagebreak
+\bibliographystyle{style/ans_js}                                                                           %custom ANS journal submission template bibliography style
+\bibliography{bibliography}
+
+\end{document}
+
+

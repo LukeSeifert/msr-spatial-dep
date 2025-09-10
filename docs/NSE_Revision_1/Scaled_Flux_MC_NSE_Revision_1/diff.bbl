@@ -1,0 +1,186 @@
+\begin{thebibliography}{10}
+\newcommand{\enquote}[1]{``#1''}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem{bettis_aircraft_1957}
+\textsc{E.~S. Bettis}, \textsc{W.~B. Cottrell}, \textsc{E.~R. Mann},
+  \textsc{J.~L. Meem}, and \textsc{G.~D. Whitman}, \enquote{The {Aircraft}
+  {Reactor} {Experiment}—{Operation},} \emph{Nuclear Science and
+  Engineering}, \textbf{2}, \emph{6}, 841 (1957); {10.13182/NSE57-A35497}.,
+  \urlprefix\url{https://doi.org/10.13182/NSE57-A35497}, publisher: Taylor \&
+  Francis \_eprint: https://doi.org/10.13182/NSE57-A35497.
+
+\bibitem{haubenreich_experience_1970}
+\textsc{P.~N. Haubenreich} and \textsc{J.~R. Engel}, \enquote{Experience with
+  the {Molten}-{Salt} {Reactor} {Experiment},} \emph{Nuclear Applications and
+  Technology}, \textbf{8}, \emph{2}, 118 (1970); {10.13182/NT8-2-118}.,
+  \urlprefix\url{https://doi.org/10.13182/NT8-2-118}, publisher: Taylor \&
+  Francis \_eprint: https://doi.org/10.13182/NT8-2-118.
+
+\bibitem{kelly_generation_2014}
+\textsc{J.~E. Kelly}, \enquote{Generation {IV} {International} {Forum}: {A}
+  decade of progress through international cooperation,} \emph{Progress in
+  Nuclear Energy}, \textbf{77}, 240 (2014); {10.1016/j.pnucene.2014.02.010}.,
+  \urlprefix\url{https://www.sciencedirect.com/science/article/pii/S0149197014000419}.
+
+\bibitem{doeardpmcre}
+\textsc{O.~of~Nuclear~Energy}, \enquote{Energy Department’s Advanced Reactor
+  Demonstration Program Awards \$30 Million in Initial Funding for Risk
+  Reduction Projects,}
+  \url{https://www.energy.gov/ne/articles/energy-departments-advanced-reactor-demonstration-program-awards-30-million-initial}
+  (2020).
+
+\bibitem{betzler2021liquid}
+\textsc{B.~Betzler}, \enquote{Liquid-fueled molten salt reactor depletion
+  modeling,} , Oak Ridge National Lab.(ORNL), Oak Ridge, TN (United States)
+  (2021).
+
+\bibitem{shahbazi_steady-state_2022}
+\textsc{S.~Shahbazi}, \textsc{P.~Romano}, \textsc{T.~Fei}, and
+  \textsc{D.~Grabaskas}, \enquote{Steady-state radiochemical transport model of
+  the molten salt reactor experiment,} \emph{Journal of Radioanalytical and
+  Nuclear Chemistry}, \textbf{331}, \emph{12}, 5247 (2022);
+  {10.1007/s10967-022-08535-3}.,
+  \urlprefix\url{https://doi.org/10.1007/s10967-022-08535-3}, 4.
+
+\bibitem{anderson_user_2022}
+\textsc{K.~Anderson}, \textsc{V.~Mascolino}, and \textsc{A.~G. Nelson},
+  \enquote{User {Guide} to the {Advanced} {Dimensional} {Depletion} for
+  {Engineering} of {Reactors} ({ADDER}) {Software} ({V}.1.01),}
+  ANL/RTR/TM-21/8-Rev.1, Argonne National Laboratory (ANL), Argonne, IL (United
+  States) (2022); {10.2172/1866062}.,
+  \urlprefix\url{https://www.osti.gov/biblio/1866062}.
+
+\bibitem{fei_validation_2022}
+\textsc{T.~Fei}, \textsc{S.~Shahbazi}, \textsc{J.~Fang}, and
+  \textsc{D.~Shaver}, \enquote{Validation of {NEAMS} {Tools} {Using} {MSRE}
+  {Data},}  ANL/NSE-22/48, Argonne National Laboratory (ANL), Argonne, IL
+  (United States) (2022); {10.2172/1880993}.,
+  \urlprefix\url{https://www.osti.gov/biblio/1880993}.
+
+\bibitem{tanocoupled2023}
+\textsc{M.~Tano}, \textsc{S.~A. Walker}, and \textsc{A.~Abou-Jaoude},
+  \enquote{A {Coupled} {Griffin} and {Pronghorn} {Method} for {Spatially}
+  {Resolved} {Depletion} {Analysis} of {Molten} {Salt} {Reactors},}
+  \emph{American Nuclear Society Mathematics \& Computation} (2023).
+
+\bibitem{betzler_liquid-fueled_2021}
+\textsc{B.~Betzler}, \enquote{Liquid-fueled {Molten} {Salt} {Reactor}
+  {Depletion} {Modeling},} , Oak Ridge National Lab. (ORNL), Oak Ridge, TN
+  (United States) (2021)\urlprefix\url{https://www.osti.gov/biblio/1809981}, 2.
+
+\bibitem{openmc}
+\textsc{P.~K. Romano}, \textsc{N.~E. Horelik}, \textsc{B.~R. Herman},
+  \textsc{A.~G. Nelson}, \textsc{B.~Forget}, and \textsc{K.~Smith},
+  \enquote{OpenMC: A state-of-the-art Monte Carlo code for research and
+  development,} \emph{Annals of Nuclear Energy}, \textbf{82}, 90 (2015);
+  {https://doi.org/10.1016/j.anucene.2014.07.048}.,
+  \urlprefix\url{https://www.sciencedirect.com/science/article/pii/S030645491400379X},
+  joint International Conference on Supercomputing in Nuclear Applications and
+  Monte Carlo 2013, SNA + MC 2013. Pluri- and Trans-disciplinarity, Towards New
+  Modeling and Numerical Simulation Paradigms.
+
+\bibitem{Chadwick20112887short}
+\textsc{M.~Chadwick}, \textsc{M.~Herman}, \textsc{P.~Oblo{\v z}insk{\' y}}
+  \textsc{et~al.}, \enquote{{ENDF/B-VII.1} Nuclear Data for Science and
+  Technology: Cross Sections, Covariances, Fission Product Yields and Decay
+  Data,} \emph{Nuclear Data Sheets}, \textbf{112}, \emph{12}, 2887  (2011);
+  {10.1016/j.nds.2011.11.002}.,
+  \urlprefix\url{https://www.sciencedirect.com/science/article/pii/S009037521100113X},
+  special Issue on ENDF/B-VII.1 Library.
+
+\bibitem{openmsr}
+\textsc{L.~Chierici}, \textsc{A.~Stubsgaard}, \textsc{L.~Labrie-Cleary},
+  \textsc{M.~Akner}, and \textsc{E.~Knudsen}, \enquote{Open Source Software for
+  Modeling Molten Salt Reactors,} \url{https://github.com/openmsr/msre} (2023).
+
+\bibitem{engel1970spray}
+\textsc{J.~Engel}, \textsc{P.~Haubenreich}, and \textsc{A.~Houtzeel},
+  \enquote{SPRAY, MIST, BUBBLES, AND FOAM IN THE MOLTEN SALT REACTOR
+  EXPERIMENT.} , Oak Ridge National Lab.(ORNL), Oak Ridge, TN (United States)
+  (1970).
+
+\bibitem{advecbook}
+\textsc{S.~Linge} and \textsc{H.~P. Langtangen}, \emph{Advection-Dominated
+  Equations}, 323--351, Springer International Publishing, Cham;
+  {10.1007/978-3-319-55456-3\_4}.,
+  \urlprefix\url{https://doi.org/10.1007/978-3-319-55456-3\_4}.
+
+\bibitem{compere1975fission}
+\textsc{E.~Compere}, \textsc{S.~Kirslis}, \textsc{E.~Bohlmann},
+  \textsc{F.~Blankenship}, and \textsc{W.~Grimes}, \enquote{Fission product
+  behavior in the molten salt reactor experiment,} , Oak Ridge National
+  Lab.(ORNL), Oak Ridge, TN (United States) (1975).
+
+\bibitem{cheng2021distribution}
+\textsc{Z.~Cheng}, \textsc{X.~Wang}, \textsc{Z.~Zhao}, \textsc{J.~Geng},
+  \textsc{J.~Hu}, \textsc{J.~Chen}, \textsc{X.~Cai}, \textsc{W.~Li},
+  \textsc{Q.~Dou}, and \textsc{Q.~Li}, \enquote{Distribution and behavior of
+  fission product 95Nb in FLiBe salt,} \emph{Radiochimica Acta}, \textbf{109},
+  \emph{4}, 311 (2021).
+
+\bibitem{shahbazi2024modeling}
+\textsc{S.~Shahbazi}, \textsc{S.~Walker}, \textsc{M.~Tano}, \textsc{T.~Fei},
+  \textsc{Y.~Cao}, and \textsc{D.~Grabaskas}, \enquote{Modeling Radionuclide
+  Inventories in MSR Off-Gas Systems with Radiochemical Transport Analysis,} ,
+  Argonne National Laboratory (ANL), Argonne, IL (United States) (2024).
+
+\bibitem{lo2022application}
+\textsc{A.~Lo}, \textsc{F.~R. Bostelmann}, \textsc{D.~Hartanto}, \textsc{B.~R.
+  Betzler}, and \textsc{W.~A. Wieselquist}, \enquote{Application of SCALE to
+  Molten Salt Fueled Reactor Physics in Support of Severe Accident Analyses,} ,
+  Oak Ridge National Laboratory (ORNL), Oak Ridge, TN (United States) (2022).
+
+\bibitem{robertson1971conceptual}
+\textsc{R.~C. Robertson}, \enquote{CONCEPTUAL DESIGN STUDY OF A SINGLE-FLUID
+  MOLTEN-SALT BREEDER REACTOR.} , comp.; Oak Ridge National Lab.(ORNL), Oak
+  Ridge, TN (United States) (1971).
+
+\bibitem{macphee1958kinetics}
+\textsc{J.~MacPhee}, \enquote{The kinetics of circulating fuel reactors,}
+  \emph{Nuclear Science and Engineering}, \textbf{4}, \emph{4}, 588 (1958).
+
+\bibitem{ridley_method_2017}
+\textsc{G.~Ridley} and \textsc{O.~Chvala}, \enquote{A method for predicting
+  fuel maintenance in once-through {MSRs},} \emph{Annals of Nuclear Energy},
+  \textbf{110}, 265 (2017); {10.1016/j.anucene.2017.06.043}.,
+  \urlprefix\url{https://linkinghub.elsevier.com/retrieve/pii/S030645491730021X}.
+
+\bibitem{rykhlevskii_modeling_2019}
+\textsc{A.~Rykhlevskii}, \textsc{J.~W. Bae}, and \textsc{K.~D. Huff},
+  \enquote{Modeling and simulation of online reprocessing in the thorium-fueled
+  molten salt breeder reactor,} \emph{Annals of Nuclear Energy}, \textbf{128},
+  366 (2019); {10.1016/j.anucene.2019.01.030}.,
+  \urlprefix\url{https://linkinghub.elsevier.com/retrieve/pii/S0306454919300350}.
+
+\bibitem{aufiero_extended_2013}
+\textsc{M.~Aufiero}, \textsc{A.~Cammi}, \textsc{C.~Fiorina},
+  \textsc{J.~Leppänen}, \textsc{L.~Luzzi}, and \textsc{M.~Ricotti},
+  \enquote{An extended version of the {SERPENT}-2 code to investigate fuel
+  burn-up and core material evolution of the {Molten} {Salt} {Fast} {Reactor},}
+  \emph{Journal of Nuclear Materials}, \textbf{441}, \emph{1-3}, 473 (2013);
+  {10.1016/j.jnucmat.2013.06.026}.,
+  \urlprefix\url{https://linkinghub.elsevier.com/retrieve/pii/S0022311513008507}.
+
+\bibitem{fiorina_preliminary_2012}
+\textsc{C.~Fiorina}, \textsc{A.~Cammi}, \textsc{J.~Krepel},
+  \textsc{K.~Mikityuk}, and \textsc{M.~E. Ricotti}, \enquote{Preliminary
+  {Analysis} of the {MSFR} {Fuel} {Cycle} {Using} {Modified}-{EQL3D}
+  {Procedure},} \emph{Volume 4: {Codes}, {Standards}, {Licensing}, and
+  {Regulatory} {Issues}; {Fuel} {Cycle}, {Radioactive} {Waste} {Management} and
+  {Decommissioning}; {Computational} {Fluid} {Dynamics} ({CFD}) and {Coupled}
+  {Codes}; {Instrumentation} and {Co}}, 293, ASME, Anaheim, California, USA
+  (2012); {10.1115/ICONE20-POWER2012-54236}.,
+  \urlprefix\url{http://proceedings.asmedigitalcollection.asme.org/proceeding.aspx?doi=10.1115/ICONE20-POWER2012-54236}.
+
+\bibitem{seifert2023analysis}
+\textsc{L.~Seifert}, \enquote{Analysis of and comparison between reprocessing
+  methods in the molten salt breeder reactor,} Master's Thesis, University of
+  Illinois at Urbana-Champaign (2023).
+
+\end{thebibliography}

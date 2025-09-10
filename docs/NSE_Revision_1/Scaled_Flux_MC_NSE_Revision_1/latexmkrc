@@ -1,0 +1,1 @@
+#$pdflatex = "latexdiff previous_main.tex main.tex > main-d.tex; pdflatex %O  main-d"
